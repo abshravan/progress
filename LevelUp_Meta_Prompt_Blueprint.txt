@@ -1,0 +1,729 @@
+⚔️
+
+LEVEL UP
+
+Your Personal Growth RPG
+
+META-PROMPT & DEVELOPMENT BLUEPRINT
+
+A Phase-by-Phase Guide to Building a Gamified Self-Improvement App
+
+Version 1.0 | March 2026
+
+Table of Contents
+
+1. Project Overview & Vision
+
+2. Core Meta-Prompt (Copy-Paste Ready)
+
+3. Phase 1 — Foundation & Onboarding
+
+4. Phase 2 — Daily Quest System (Habit Tracker)
+
+5. Phase 3 — Goal System (Boss Battles)
+
+6. Phase 4 — Adventure Log (Journal)
+
+7. Phase 5 — Dashboard & Analytics
+
+8. Phase 6 — AI Coach Integration
+
+9. Phase 7 — Gamification Engine
+
+10. Phase 8 — Polish, Animations & UX
+
+11. Data Architecture
+
+12. Tech Stack Options
+
+13. Prompt Templates for Each Phase
+
+14. Testing & QA Checklist
+
+15. Future Expansion Ideas
+
+1. Project Overview & Vision
+
+What is LevelUp?
+
+LevelUp is a gamified self-improvement application that treats your real life like an RPG. You are the hero of your own story. Your daily habits are quests, your long-term goals are boss battles, your reflections are adventure logs, and an AI mentor coaches you through your journey.
+
+Core Philosophy
+
+-   Consistency > Intensity: Small daily actions compound into massive results
+
+-   Visibility: You can't improve what you don't measure. Every action is tracked and visualized
+
+-   Gamification: Dopamine loops (XP, levels, streaks, titles) make improvement addictive
+
+-   AI-Powered Accountability: A coach that knows your data and gives personalized advice
+
+-   Self-Ownership: All data stays on the user's device/account. Privacy first
+
+Target User
+
+Anyone aged 16-40 who wants to build better habits around productivity and learning, but struggles with consistency. They respond well to game mechanics and want a system that feels rewarding, not punishing.
+
+Core Pillars
+
+  ----------------- ----------------- ----------------- -------------------
+  Pillar            Feature           RPG Metaphor      XP Reward
+
+  Habits            Daily Tracker     Daily Quests      5-50 per quest
+
+  Goals             Goal Tracker      Boss Battles      100 on completion
+
+  Reflection        Journal           Adventure Log     10 per entry
+
+  Guidance          AI Coach          Wise Mentor       N/A
+  ----------------- ----------------- ----------------- -------------------
+
+2. Core Meta-Prompt (Copy-Paste Ready)
+
+Use this master prompt with any AI coding assistant (Claude, ChatGPT, Copilot, etc.) to communicate the full vision in one shot. Then use the phase-specific prompts in Section 13 for step-by-step execution.
+
+MASTER META-PROMPT
+
+Build me a gamified self-improvement app called "LevelUp" with these specifications:
+
+CONCEPT: Life as an RPG. Users earn XP from daily habits, goals, and journaling. They level up through 20 levels with titles (Novice to Mythic). A streak system tracks consistency. An AI coach provides personalized guidance.
+
+DESIGN: Dark theme (deep navy/purple backgrounds). Amber/orange accent color for XP, energy, and CTAs. Purple for goals. Green for completion. Pink for mindset. Mobile-first layout (max 480px). Smooth animations. Outfit font for UI, Crimson Pro for journal entries.
+
+FEATURES:
+
+1.  Onboarding flow: Name input + preset habit selection (8 presets across 4 categories)
+
+2.  Daily Quest System: Check off habits to earn XP. Each habit has a category and XP value. Custom habit creation with category picker and XP slider (5-50)
+
+3.  Goal System: Create goals with title, description, deadline. Progress slider (0-100%). Earn 100 XP on completion. Active vs Conquered sections
+
+4.  Adventure Log (Journal): Mood selector (5 levels), free-text entry, +10 XP per entry, chronological display with timestamps
+
+5.  Dashboard: Daily completion ring, weekly XP bar chart, skill radar chart (4 categories), active goals preview, quick-action buttons
+
+6.  AI Coach: Chat interface with context-aware AI that sees user's habits, goals, journal, and streak. Quick prompt buttons. RPG-themed responses
+
+7.  Gamification: XP system with 20 levels, exponential thresholds, streak fire counter, level-up celebration modal, title progression
+
+PERSISTENCE: Use browser-compatible storage (localStorage, IndexedDB, or equivalent). All data must survive page refreshes and sessions.
+
+CATEGORIES: Productivity (lightning icon, amber), Learning (book icon, purple), Health (muscle icon, green), Mindset (brain icon, pink).
+
+TECH: React (single-file component with JSX), Tailwind-compatible utility styling, or inline styles. No external backend required except AI API calls.
+
+3. Phase 1 — Foundation & Onboarding
+
+Objective
+
+Set up the project skeleton, data layer, and create a memorable first-run experience that gets users invested immediately.
+
+What to Build
+
+-   Project setup with React (or your framework of choice)
+
+-   Persistent storage layer (load/save helper functions)
+
+-   Data models for Profile, Habits, Goals, Journal, DailyLog
+
+-   Onboarding screen with name input
+
+-   Preset habit selector (grid of 8 habits across 4 categories)
+
+-   "Begin Your Journey" CTA that saves initial state and transitions to main app
+
+Key Design Decisions
+
+-   App container: max-width 480px, centered, dark background gradient (#0A0A1A to #0F0F2A)
+
+-   Onboarding should feel like a game character creation screen
+
+-   Preset habits should show category icon, name, and XP value
+
+-   Selected presets get a colored border glow matching their category
+
+Data Models to Define
+
+  -------------- ------------------------------------------------------------------ -----------------------------------------
+  Model          Fields                                                             Notes
+
+  Profile        name, xp, createdAt                                                Single object, persisted
+
+  Habit          id, name, category, xp                                             Array of habits
+
+  Goal           id, title, description, deadline, progress, completed, createdAt   Array of goals
+
+  JournalEntry   id, text, mood (0-4), date, time                                   Array of entries
+
+  DailyLog       { [date]: { [habitId]: boolean } }                                 Nested object, tracks daily completions
+  -------------- ------------------------------------------------------------------ -----------------------------------------
+
+Acceptance Criteria
+
+-   First-time user sees onboarding; returning user goes directly to dashboard
+
+-   User can enter name and select from preset habits
+
+-   Data persists across browser refresh
+
+-   Clean transition from onboarding to main app
+
+4. Phase 2 — Daily Quest System (Habit Tracker)
+
+Objective
+
+Build the core daily engagement loop. Users check off habits each day to earn XP.
+
+What to Build
+
+-   Habit list view showing all habits for today
+
+-   Each habit card shows: checkbox, name, category icon+label, XP value
+
+-   Tapping a habit toggles completion for today
+
+-   Completing a habit triggers XP gain (visual feedback + profile XP update)
+
+-   "+ New" button to add custom habits
+
+-   Custom habit form: name input, category picker (4 category chips), XP slider (5-50, step 5)
+
+-   Delete button (X) on each habit
+
+-   Completed habits appear dimmed with strikethrough text
+
+Interaction Details
+
+Check off habit: Toggle today's log entry. If marking complete, call addXP(habit.xp). Show +XP popup animation floating up from center of screen.
+
+Add custom habit: Expand inline form below header. Category chips highlight with category color when selected. XP slider shows current value. Save creates habit and collapses form.
+
+Delete habit: Remove from habit array. Does not remove historical daily log data.
+
+Acceptance Criteria
+
+-   Habits toggle correctly and persist across refresh
+
+-   XP is awarded only once per habit per day (re-toggling removes the XP)
+
+-   Custom habits appear in the list immediately after creation
+
+-   Visual distinction between completed and pending habits
+
+5. Phase 3 — Goal System (Boss Battles)
+
+Objective
+
+Allow users to set meaningful medium/long-term goals, track progress manually, and celebrate completion.
+
+What to Build
+
+-   Goal creation form: title (required), description (optional), deadline date (optional)
+
+-   Active goals section with progress slider (0-100%, step 5)
+
+-   Each goal card shows: title, description preview, deadline, progress bar
+
+-   When progress reaches 100%, goal is marked completed and user earns 100 XP
+
+-   Conquered section at the bottom showing completed goals with checkmark
+
+-   Delete button on each goal
+
+Design Details
+
+-   Progress bar uses purple gradient (#8B5CF6 to #6D28D9)
+
+-   Completed progress bar turns green (#10B981)
+
+-   Goal cards are slightly larger than habit cards to feel more significant
+
+-   Deadline shows with calendar emoji prefix
+
+Acceptance Criteria
+
+-   Goals persist across sessions
+
+-   Progress slider updates in real-time with visual progress bar
+
+-   100 XP is awarded exactly once when goal first reaches 100%
+
+-   Completed goals move to Conquered section
+
+6. Phase 4 — Adventure Log (Journal)
+
+Objective
+
+Provide a reflective journaling space that encourages daily self-awareness and rewards the behavior.
+
+What to Build
+
+-   Mood selector: 5 emoji buttons (distressed to happy), current selection scaled up
+
+-   Text area with motivating placeholder text
+
+-   Save button showing "+10 XP" incentive
+
+-   Chronological entry list (newest first) with date, time, mood emoji, and text
+
+-   Journal text rendered in serif font (Crimson Pro) for a diary feel
+
+Mood Scale
+
+  -------------- -------------- -------------- -------------- --------------
+  Level 0        Level 1        Level 2        Level 3        Level 4
+
+  Struggling     Down           Neutral        Good           Great
+  -------------- -------------- -------------- -------------- --------------
+
+Acceptance Criteria
+
+-   Mood must be selected (default to neutral/3)
+
+-   Empty text entries are rejected
+
+-   10 XP awarded per journal entry (no daily limit)
+
+-   Entries persist and display in reverse chronological order
+
+7. Phase 5 — Dashboard & Analytics
+
+Objective
+
+Create a data-rich home screen that gives users an instant snapshot of their progress and motivates further action.
+
+Components to Build
+
+A. Daily Completion Ring
+
+-   Circular SVG progress indicator showing percentage of today's habits completed
+
+-   Center text: percentage in bold amber
+
+-   Side text: X/Y quests done + motivational micro-copy based on percentage
+
+B. Weekly XP Bar Chart
+
+-   7 vertical bars (Sun-Sat) showing XP earned each day from completed habits
+
+-   Today's bar highlighted in amber gradient; other bars in muted purple
+
+-   Bars scale relative to the maximum XP day
+
+C. Skill Radar Chart
+
+-   4-axis radar/spider chart for the 4 categories
+
+-   Score per axis = completion rate of that category's habits over last 7 days
+
+-   Filled polygon with amber color at 20% opacity, amber stroke
+
+-   Category emoji labels at each axis endpoint
+
+D. Active Goals Preview
+
+-   Top 3 active goals with mini progress bars
+
+-   Compact card format
+
+E. Quick Action Buttons
+
+-   2x2 grid: Do Quests, Set Goal, Journal, AI Coach
+
+-   Each button navigates to the corresponding tab
+
+Acceptance Criteria
+
+-   All data visualizations update in real-time as habits are completed
+
+-   Dashboard loads quickly with no layout shifts
+
+-   Charts handle zero-data states gracefully
+
+8. Phase 6 — AI Coach Integration
+
+Objective
+
+Add an AI-powered coaching chat that has full context of the user's data and provides actionable, personalized, RPG-themed guidance.
+
+What to Build
+
+-   Chat interface with message bubbles (user = amber, coach = dark card)
+
+-   Auto-scroll to latest message
+
+-   Text input with send button
+
+-   Quick prompt buttons (4 pre-written prompts) displayed as scrollable chips
+
+-   Loading state with "Thinking... " indicator
+
+-   Welcome message on first load
+
+System Prompt Construction
+
+The AI coach's system prompt must be dynamically constructed with live user data:
+
+-   User profile: name, level, title, total XP, streak count
+
+-   Today's completed quests (names)
+
+-   Today's remaining quests (names)
+
+-   Active goals with progress percentages
+
+-   Last 5 journal entries (date + first 100 chars of text)
+
+AI Behavior Guidelines
+
+-   Be encouraging and positive, never shaming
+
+-   Use RPG metaphors naturally (quests, battles, leveling up, skills)
+
+-   Give specific, actionable advice based on the user's actual data
+
+-   Keep responses concise: 2-4 paragraphs maximum
+
+-   Use emojis sparingly and naturally
+
+Quick Prompts
+
+8.  "What should I focus on today?"
+
+9.  "How can I break my current goal into steps?"
+
+10. "Give me a productivity tip"
+
+11. "Analyze my progress this week"
+
+API Integration
+
+Use Anthropic's Messages API (claude-sonnet-4-20250514). Send conversation history with each request for context continuity within a session. No API key needed if running inside Claude artifacts.
+
+Acceptance Criteria
+
+-   Coach responses reflect actual user data (not generic)
+
+-   Chat history maintained within a single session
+
+-   Quick prompts send the prompt text as a user message
+
+-   Error handling for API failures with user-friendly message
+
+9. Phase 7 — Gamification Engine
+
+Objective
+
+Implement the complete XP, leveling, streak, and title system that makes the app addictive.
+
+XP System
+
+  ----------------------------------- -----------------------------------
+  Action                              XP Reward
+
+  Complete a daily habit              5-50 (set per habit)
+
+  Complete a goal (100%)              100
+
+  Write a journal entry               10
+  ----------------------------------- -----------------------------------
+
+Level Thresholds (20 Levels)
+
+Exponential curve: 0, 100, 250, 500, 850, 1300, 1900, 2600, 3500, 4600, 6000, 7800, 10000, 13000, 17000, 22000, 28000, 36000, 46000, 60000
+
+Title Progression
+
+  ----------------------------------- -----------------------------------
+  Levels                              Title
+
+  1-2                                 Novice
+
+  3-4                                 Apprentice
+
+  5-6                                 Journeyman
+
+  7-8                                 Adept
+
+  9-10                                Expert
+
+  11-12                               Veteran
+
+  13-14                               Master
+
+  15-16                               Grandmaster
+
+  17-18                               Legend
+
+  19-20                               Mythic
+  ----------------------------------- -----------------------------------
+
+Streak System
+
+-   Count consecutive days where at least 1 habit was completed
+
+-   Streak fire emoji displayed in header (greyed out if streak = 0)
+
+-   Calculated backwards from today; if today has no completions yet, still count if yesterday was active
+
+UI Components
+
+-   XP Bar: Shown in header. Shows current XP within level, progress bar with amber gradient + glow
+
+-   Level-Up Modal: Full-screen overlay with celebration emoji, level number, new title. Dismiss button
+
+-   +XP Popup: Floating amber badge at top of screen, fades up and out over 1.2 seconds
+
+10. Phase 8 — Polish, Animations & UX
+
+Objective
+
+Elevate the app from functional to delightful with micro-interactions, smooth transitions, and attention to detail.
+
+Animations to Add
+
+-   XP bar: width transition 0.6s with cubic-bezier(.22,1,.36,1) easing
+
+-   Habit checkbox: scale bounce on completion
+
+-   XP popup: float up + fade out keyframe animation
+
+-   Level-up modal: scale-in entrance with backdrop blur
+
+-   Progress bars: smooth width transitions (0.4s ease)
+
+-   Mood selector: scale(1.2) on selected mood with transition
+
+-   Tab switching: consider fade or slide transitions
+
+UX Refinements
+
+-   Empty states: Friendly messages with emoji when lists are empty
+
+-   Loading state: Sword emoji + "Loading your quest..." on initial load
+
+-   Confirm destructive actions (deleting habits/goals) — optional for MVP
+
+-   Keyboard support: Enter to send in chat, Enter to save entries
+
+-   Auto-focus on relevant inputs when forms open
+
+Visual Details
+
+-   Header gradient: #12122E to transparent
+
+-   Card background: #12122A with 1px #1E1E3E border, 14px radius
+
+-   Bottom nav: fixed, blurred background (#0D0D22 at 93% opacity), backdrop-filter: blur(12px)
+
+-   Accent shadows: box-shadow 0 0 12px #F59E0B66 on XP bar
+
+-   Avatar: 44x44px, rounded square (12px), amber-to-red gradient, first letter of name
+
+11. Data Architecture
+
+Storage Keys
+
+  ----------------------- ----------------------- ------------------------------------------------------
+  Key                     Type                    Content
+
+  levelup-profile         Object                  { name, xp, createdAt }
+
+  levelup-habits          Array                   [{ id, name, category, xp }]
+
+  levelup-goals           Array                   [{ id, title, desc, deadline, progress, completed }]
+
+  levelup-journal         Array                   [{ id, text, mood, date, time }]
+
+  levelup-daily-log       Object                  { '2026-03-30': { 'habitId': true } }
+  ----------------------- ----------------------- ------------------------------------------------------
+
+Data Flow
+
+12. User action triggers state update (React setState)
+
+13. Updated state is immediately persisted to storage
+
+14. On app load, state is hydrated from storage
+
+15. If no profile found in storage, show onboarding
+
+12. Tech Stack Options
+
+Option A: React (Recommended for MVP)
+
+-   Single-file React component (.jsx)
+
+-   Inline styles or CSS-in-JS (no build tooling needed)
+
+-   localStorage or IndexedDB for persistence
+
+-   Anthropic Messages API for AI coach
+
+-   Deploy on Vercel/Netlify/GitHub Pages
+
+Option B: Next.js (For Production)
+
+-   Next.js 14+ with App Router
+
+-   Tailwind CSS for styling
+
+-   Supabase or Firebase for cloud persistence and auth
+
+-   Anthropic API via server-side route handler
+
+-   PWA setup for mobile home screen installation
+
+Option C: React Native (For Mobile App)
+
+-   Expo with React Native
+
+-   AsyncStorage for persistence
+
+-   React Navigation for tabs
+
+-   Anthropic API for AI coach
+
+-   Deploy to App Store / Google Play
+
+Option D: Flutter (Cross-Platform)
+
+-   Flutter with Dart
+
+-   SharedPreferences / Hive for local storage
+
+-   Anthropic API via HTTP package
+
+-   Single codebase for iOS, Android, and Web
+
+13. Prompt Templates for Each Phase
+
+Copy-paste these prompts into your AI coding assistant to build each phase incrementally. Each prompt references the previous phase so the AI maintains context.
+
+Phase 1 Prompt
+
+"Set up a React project for a gamified self-improvement app called LevelUp. Create a dark-themed UI (background #0A0A1A, card background #12122A, amber accent #F59E0B). Build an onboarding screen with: (1) name input field, (2) a 2-column grid of 8 preset habits across 4 categories [Productivity, Learning, Health, Mindset], each showing category icon, habit name, and XP value, (3) a 'Begin Your Journey' button. Set up localStorage persistence with load/save helpers. Define data models for Profile, Habits, Goals, Journal, and DailyLog. Returning users should skip onboarding."
+
+Phase 2 Prompt
+
+"Building on Phase 1, add a Daily Quests tab. Show all habits as cards with: checkbox toggle, habit name, category icon+label, XP value. Tapping toggles today's completion in the DailyLog. Completed habits appear dimmed with strikethrough. Add a '+ New' button that expands an inline form with: name input, 4 category selector chips, XP slider (5-50). Deleting habits removes them from the array. Track today's date as YYYY-MM-DD string."
+
+Phase 3 Prompt
+
+"Add a Goals tab (Boss Battles). Goal creation form with: title (required), description (optional textarea), deadline (date input). Active goals show a progress slider (0-100%). At 100%, mark complete and award 100 XP. Show completed goals in a 'Conquered' section with green checkmark. Purple gradient progress bars."
+
+Phase 4 Prompt
+
+"Add a Journal tab (Adventure Log). Include: 5-emoji mood selector with scale animation on selected mood, textarea for entry, save button showing '+10 XP'. Display entries in reverse chronological order with date, time, mood emoji, and text in Crimson Pro serif font."
+
+Phase 5 Prompt
+
+"Add a Dashboard tab as the home screen. Include: (A) circular SVG progress ring showing today's habit completion %, (B) 7-day XP bar chart with today highlighted, (C) 4-axis radar chart showing 7-day completion rate per category, (D) top 3 active goals with mini progress bars, (E) 2x2 quick-action grid linking to other tabs."
+
+Phase 6 Prompt
+
+"Add an AI Coach tab with chat interface. Build a system prompt dynamically with user's name, level, XP, streak, today's completed/remaining habits, active goals with progress, and last 5 journal entries. Use Anthropic Messages API (claude-sonnet-4-20250514). Add 4 quick-prompt buttons. Style: user messages in amber, coach in dark cards. The coach should use RPG metaphors and give specific, data-driven advice."
+
+Phase 7 Prompt
+
+"Implement the gamification engine. XP system: 20 levels with exponential thresholds [0,100,250,500,...,60000]. Titles every 2 levels: Novice, Apprentice, Journeyman, Adept, Expert, Veteran, Master, Grandmaster, Legend, Mythic. XP bar in header with glow effect. Level-up celebration modal. +XP floating popup animation. Streak fire counter (consecutive days with completions)."
+
+Phase 8 Prompt
+
+"Polish the entire app. Add: smooth CSS transitions on all interactive elements, empty state messages, loading screen, keyboard support (Enter to send/save), auto-focus on inputs, backdrop blur on bottom nav, consistent border radius (14px cards, 10px inputs, 8px chips). Ensure all animations use cubic-bezier easing for natural feel."
+
+14. Testing & QA Checklist
+
+Functional Tests
+
+-   Onboarding creates profile and selected habits correctly
+
+-   Returning user skips onboarding and sees saved data
+
+-   Habits toggle correctly; XP awarded once per day per habit
+
+-   Goals progress updates and 100% triggers completion + XP
+
+-   Journal entries save with correct mood, date, and time
+
+-   Dashboard charts reflect real data (not dummy data)
+
+-   AI Coach receives correct context and responds appropriately
+
+-   Level-up modal triggers at correct XP thresholds
+
+-   Streak calculates correctly across multiple days
+
+Edge Cases
+
+-   Zero habits: dashboard charts should handle gracefully
+
+-   Zero goals: goals page shows empty state
+
+-   Very long habit/goal names: text should truncate or wrap
+
+-   Rapid habit toggling: XP should not double-count
+
+-   Midnight transition: today's date should update
+
+-   Large data: 100+ journal entries should not lag
+
+-   AI API failure: graceful error message in chat
+
+Visual Tests
+
+-   Dark theme is consistent across all tabs
+
+-   No white flashes on load
+
+-   Animations are smooth (no jank)
+
+-   Bottom nav doesn't overlap content
+
+-   Text is readable (contrast ratio > 4.5:1 for body text)
+
+15. Future Expansion Ideas
+
+Version 2.0 Features
+
+-   Skill trees: Unlock new abilities as you level up in each category
+
+-   Achievements/Badges: "7-Day Warrior", "Goal Crusher", "Reflection Master"
+
+-   Social features: Share progress cards, challenge friends
+
+-   Weekly/Monthly reports: Email or in-app summary of progress
+
+-   Habit scheduling: Some habits only on weekdays, some on specific days
+
+-   Time tracking: How long you spend on each habit
+
+-   Pomodoro timer: Built-in focus timer for productivity habits
+
+Version 3.0 Features
+
+-   AI-generated quest suggestions based on your goals
+
+-   Voice journaling with speech-to-text
+
+-   Integration with external apps (Google Calendar, Notion, Todoist)
+
+-   Multiplayer: Guilds, leaderboards, accountability partners
+
+-   Customizable themes and avatar system
+
+-   Export data as CSV/PDF for personal records
+
+-   Widget for phone home screen showing today's quests
+
+Monetization Options (If Applicable)
+
+-   Freemium: Free core features, premium AI coaching (unlimited messages)
+
+-   One-time purchase: Unlock premium themes, extra analytics
+
+-   Subscription: Advanced AI features, cloud sync across devices
+
+Built with ❤️ for your self-improvement journey
+
+LevelUp — Your Personal Growth RPG
