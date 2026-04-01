@@ -8,12 +8,19 @@ import Goals from "@/components/Goals";
 import Journal from "@/components/Journal";
 import AICoach from "@/components/AICoach";
 import FeaturesList from "@/components/FeaturesList";
+import Analytics from "@/components/Analytics";
+import Badges from "@/components/Badges";
+import PomodoroTimer from "@/components/PomodoroTimer";
+import CommandPalette from "@/components/CommandPalette";
+import ThemeSwitcher, { applyTheme } from "@/components/ThemeSwitcher";
+import WeeklyChallenges from "@/components/WeeklyChallenges";
 import {
   type Profile,
   type Habit,
   type Goal,
   type JournalEntry,
   type DailyLog,
+  type ThemeId,
   loadProfile,
   loadHabits,
   loadGoals,
@@ -23,17 +30,20 @@ import {
   importAllData,
   loadSoundEnabled,
   saveSoundEnabled,
+  loadTheme,
 } from "@/lib/storage";
 import { getLevelProgress, getTitle, getLevel } from "@/lib/game-data";
 import { playLevelUp, playExport } from "@/lib/sounds";
 
-type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "features";
+type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "analytics" | "badges" | "features";
 
 const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
   { id: "dashboard", icon: "⌘", label: "Dashboard" },
   { id: "quests", icon: "◆", label: "Daily Quests" },
   { id: "goals", icon: "◎", label: "Goals" },
   { id: "journal", icon: "✎", label: "Journal" },
+  { id: "analytics", icon: "◧", label: "Analytics" },
+  { id: "badges", icon: "✦", label: "Badges" },
   { id: "coach", icon: "◈", label: "AI Coach" },
   { id: "features", icon: "★", label: "Feature Ideas" },
 ];
@@ -58,6 +68,9 @@ export default function Home() {
   const [toast, setToast] = useState<{ message: string; undoAction?: () => void } | null>(null);
   const [toastTimer, setToastTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<ThemeId>("tokyo-night");
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   useEffect(() => {
     const p = loadProfile();
@@ -67,8 +80,23 @@ export default function Home() {
     setJournal(loadJournal());
     setDailyLog(loadDailyLog());
     setSoundEnabled(loadSoundEnabled());
+    const theme = loadTheme();
+    setCurrentTheme(theme);
+    applyTheme(theme);
     if (p) setPrevLevel(getLevel(p.xp));
     setLoaded(true);
+  }, []);
+
+  // Keyboard shortcuts: Cmd+K
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   useEffect(() => {
@@ -146,6 +174,22 @@ export default function Home() {
     return streak;
   }, [dailyLog]);
 
+  // Command palette actions
+  const cmdActions = profile ? [
+    { id: "nav-dashboard", label: "Go to Dashboard", icon: "⌘", action: () => switchTab("dashboard"), keywords: ["home"] },
+    { id: "nav-quests", label: "Go to Daily Quests", icon: "◆", action: () => switchTab("quests"), keywords: ["habits"] },
+    { id: "nav-goals", label: "Go to Goals", icon: "◎", action: () => switchTab("goals"), keywords: ["targets"] },
+    { id: "nav-journal", label: "Go to Journal", icon: "✎", action: () => switchTab("journal"), keywords: ["diary", "write"] },
+    { id: "nav-analytics", label: "Go to Analytics", icon: "◧", action: () => switchTab("analytics"), keywords: ["stats", "charts", "heatmap"] },
+    { id: "nav-badges", label: "Go to Badges", icon: "✦", action: () => switchTab("badges"), keywords: ["achievements"] },
+    { id: "nav-coach", label: "Go to AI Coach", icon: "◈", action: () => switchTab("coach"), keywords: ["ai", "help"] },
+    { id: "nav-features", label: "Go to Feature Ideas", icon: "★", action: () => switchTab("features") },
+    { id: "export", label: "Export Data", description: "Download backup as JSON", icon: "↓", action: handleExport, keywords: ["backup", "download"] },
+    { id: "import", label: "Import Data", description: "Restore from backup file", icon: "↑", action: () => setShowImportDialog(true), keywords: ["restore", "upload"] },
+    { id: "theme", label: "Change Theme", description: "Switch color theme", icon: "🎨", action: () => setShowThemePicker(true), keywords: ["dark", "light", "colors"] },
+    { id: "sound", label: soundEnabled ? "Mute Sounds" : "Enable Sounds", icon: soundEnabled ? "🔇" : "🔊", action: toggleSound, keywords: ["audio", "mute"] },
+  ] : [];
+
   if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#191919]">
@@ -174,7 +218,7 @@ export default function Home() {
   const streak = calculateStreak();
 
   return (
-    <div className="min-h-screen flex bg-[#191919]">
+    <div className="min-h-screen flex" style={{ background: "var(--background)" }}>
       {/* ===== SIDEBAR ===== */}
       <aside
         className="fixed left-0 top-0 bottom-0 z-40 flex flex-col border-r border-[var(--border-light)] bg-[var(--sidebar)] transition-all duration-300 ease-out"
@@ -284,6 +328,20 @@ export default function Home() {
               );
             })}
           </div>
+
+          {/* Cmd+K hint */}
+          {!sidebarCollapsed && (
+            <button
+              onClick={() => setCmdPaletteOpen(true)}
+              className="w-full flex items-center gap-3 px-3 py-2 mt-4 rounded-lg text-left text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+            >
+              <span className="text-sm shrink-0 w-5 text-center opacity-50">⌘</span>
+              <span className="text-[12px]">Command palette</span>
+              <kbd className="ml-auto px-1.5 py-0.5 rounded text-[9px] text-[var(--text-muted)] bg-[var(--background)] border border-[var(--border-light)] font-mono">
+                ⌘K
+              </kbd>
+            </button>
+          )}
         </nav>
 
         {/* Bottom */}
@@ -305,12 +363,25 @@ export default function Home() {
               <button
                 onClick={toggleSound}
                 className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+                title={soundEnabled ? "Sound on" : "Sound off"}
               >
                 {soundEnabled ? "🔊" : "🔇"}
               </button>
+              <button
+                onClick={() => setShowThemePicker((v) => !v)}
+                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+                title="Theme"
+              >
+                🎨
+              </button>
             </div>
+            {showThemePicker && (
+              <div className="animate-slide-down">
+                <ThemeSwitcher currentTheme={currentTheme} onThemeChange={setCurrentTheme} />
+              </div>
+            )}
             <div className="text-[10px] text-[var(--text-muted)] px-1">
-              LevelUp v1.1 &middot; {new Date().getFullYear()}
+              LevelUp v2.0 &middot; {new Date().getFullYear()}
             </div>
           </div>
         )}
@@ -324,14 +395,28 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 py-8 lg:py-10" key={pageKey}>
           <div className="page-enter">
             {tab === "dashboard" && (
-              <Dashboard
-                profile={profile}
-                habits={habits}
-                dailyLog={dailyLog}
-                goals={goals}
-                journal={journal}
-                onNavigate={(t) => switchTab(t as Tab)}
-              />
+              <>
+                <Dashboard
+                  profile={profile}
+                  habits={habits}
+                  dailyLog={dailyLog}
+                  goals={goals}
+                  journal={journal}
+                  onNavigate={(t) => switchTab(t as Tab)}
+                />
+                {/* Weekly Challenges on Dashboard */}
+                <div className="mt-5">
+                  <WeeklyChallenges
+                    habits={habits}
+                    dailyLog={dailyLog}
+                    journal={journal}
+                    goals={goals}
+                    profile={profile}
+                    onProfileUpdate={setProfile}
+                    onToast={showToast}
+                  />
+                </div>
+              </>
             )}
             {tab === "quests" && (
               <DailyQuests
@@ -369,6 +454,22 @@ export default function Home() {
                 onXPGain={handleXPGain}
               />
             )}
+            {tab === "analytics" && (
+              <Analytics
+                habits={habits}
+                dailyLog={dailyLog}
+                journal={journal}
+                totalXP={profile.xp}
+              />
+            )}
+            {tab === "badges" && (
+              <Badges
+                profile={profile}
+                dailyLog={dailyLog}
+                habits={habits}
+                onNewBadge={(name) => showToast(`Badge unlocked: ${name}!`)}
+              />
+            )}
             {tab === "coach" && (
               <AICoach
                 profile={profile}
@@ -383,6 +484,22 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* ===== POMODORO TIMER ===== */}
+      <PomodoroTimer
+        habits={habits}
+        profile={profile}
+        onProfileUpdate={setProfile}
+        onXPGain={handleXPGain}
+        onToast={showToast}
+      />
+
+      {/* ===== COMMAND PALETTE ===== */}
+      <CommandPalette
+        actions={cmdActions}
+        isOpen={cmdPaletteOpen}
+        onClose={() => setCmdPaletteOpen(false)}
+      />
 
       {/* ===== XP POPUP ===== */}
       {xpPopup !== null && (
