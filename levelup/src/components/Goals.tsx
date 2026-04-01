@@ -73,25 +73,25 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
   };
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-semibold text-[var(--text-primary)] tracking-tight">
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-3xl font-semibold text-[var(--text-primary)] tracking-tight">
           Goals
         </h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 rounded-md text-xs font-medium text-[var(--text-primary)] bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)] transition-colors"
+          className="px-4 py-2 rounded-lg text-xs font-medium text-[var(--text-primary)] bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)] transition-all btn-press"
         >
           + New goal
         </button>
       </div>
-      <p className="text-sm text-[var(--text-muted)] mb-6">
+      <p className="text-sm text-[var(--text-muted)] mb-8">
         {activeGoals.length} active &middot; {conqueredGoals.length} completed
       </p>
 
       {/* Form */}
       {showForm && (
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5 mb-5 animate-slide-down">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 mb-6 animate-slide-down">
           <input
             type="text"
             value={title}
@@ -129,17 +129,17 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
 
       {/* Active Goals */}
       {activeGoals.length === 0 && conqueredGoals.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--border)] p-10 text-center">
-          <p className="text-sm text-[var(--text-muted)] mb-2">No goals yet</p>
-          <button onClick={() => setShowForm(true)} className="text-sm text-[var(--accent)] hover:underline">
+        <div className="rounded-xl border border-dashed border-[var(--border)] p-14 text-center animate-fade-in">
+          <p className="text-base text-[var(--text-muted)] mb-3">No goals yet</p>
+          <button onClick={() => setShowForm(true)} className="text-sm text-[var(--accent)] hover:underline btn-press">
             Set your first goal
           </button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8 stagger-children">
           {activeGoals.length > 0 && (
             <div>
-              <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium mb-3 flex items-center gap-2">
+              <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-semibold mb-3 flex items-center gap-2.5">
                 <span>Active</span>
                 <div className="flex-1 h-px bg-[var(--border-light)]" />
               </h3>
@@ -147,7 +147,7 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
                 {activeGoals.map((goal) => (
                   <div
                     key={goal.id}
-                    className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5 group"
+                    className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-5 group card-hover"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0 pr-4">
@@ -198,13 +198,13 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
 
           {conqueredGoals.length > 0 && (
             <div>
-              <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium mb-3 flex items-center gap-2">
+              <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-semibold mb-3 flex items-center gap-2.5">
                 <span>Completed</span>
                 <div className="flex-1 h-px bg-[var(--border-light)]" />
               </h3>
-              <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] overflow-hidden divide-y divide-[var(--border-light)]">
+              <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] overflow-hidden divide-y divide-[var(--border-light)]">
                 {conqueredGoals.map((goal) => (
-                  <div key={goal.id} className="flex items-center gap-3 px-4 py-3 group notion-row">
+                  <div key={goal.id} className="flex items-center gap-4 px-5 py-3.5 group notion-row">
                     <div className="w-[18px] h-[18px] rounded flex items-center justify-center bg-[var(--green)] shrink-0">
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

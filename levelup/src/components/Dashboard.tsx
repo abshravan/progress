@@ -25,14 +25,7 @@ interface Props {
   onNavigate: (tab: string) => void;
 }
 
-export default function Dashboard({
-  profile,
-  habits,
-  dailyLog,
-  goals,
-  journal,
-  onNavigate,
-}: Props) {
+export default function Dashboard({ profile, habits, dailyLog, goals, journal, onNavigate }: Props) {
   const today = getTodayString();
   const todayLog = dailyLog[today] || {};
   const completedToday = habits.filter((h) => todayLog[h.id]).length;
@@ -49,44 +42,44 @@ export default function Dashboard({
   const recentJournal = journal.slice(0, 3);
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[var(--text-primary)] tracking-tight">
+        <h1 className="text-3xl font-semibold text-[var(--text-primary)] tracking-tight">
           Good {getGreetingTime()}, {profile.name}
         </h1>
-        <p className="text-sm text-[var(--text-muted)] mt-1">
+        <p className="text-sm text-[var(--text-muted)] mt-1.5">
           Level {level} {title} &middot; {profile.xp.toLocaleString()} XP
         </p>
       </div>
 
-      {/* Top row: Today's progress + Weekly XP */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      {/* Top row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 stagger-children">
         {/* Today's Progress */}
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5">
-          <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium mb-4">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">
             Today&apos;s Progress
           </h3>
-          <div className="flex items-center gap-5">
-            <div className="relative w-20 h-20 shrink-0">
+          <div className="flex items-center gap-6">
+            <div className="relative w-24 h-24 shrink-0">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border-light)" strokeWidth="6" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border-light)" strokeWidth="5" />
                 <circle
                   cx="50" cy="50" r="40"
-                  fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round"
+                  fill="none" stroke="var(--accent)" strokeWidth="5" strokeLinecap="round"
                   strokeDasharray={`${pct * 2.51} 251`}
-                  className="transition-all duration-700"
+                  className="transition-all duration-1000 ease-out"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-semibold text-[var(--text-primary)]">{pct}%</span>
+                <span className="text-xl font-bold text-[var(--text-primary)]">{pct}%</span>
               </div>
             </div>
             <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">
+              <p className="text-base font-medium text-[var(--text-primary)]">
                 {completedToday} of {totalHabits} quests
               </p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">
+              <p className="text-sm text-[var(--text-muted)] mt-1.5 leading-relaxed">
                 {pct === 100
                   ? "Perfect day! All quests complete."
                   : pct >= 50
@@ -100,51 +93,51 @@ export default function Dashboard({
         </div>
 
         {/* Weekly XP */}
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5">
-          <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium mb-4">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">
             This Week
           </h3>
-          <div className="flex items-end gap-1.5 h-16">
+          <div className="flex items-end gap-2 h-20">
             {weekXP.map((xp, i) => {
               const isToday = i === new Date().getDay();
               const height = Math.max((xp / maxWeekXP) * 100, 6);
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                <div key={i} className="flex-1 flex flex-col items-center gap-2">
                   <div
-                    className="w-full rounded-sm transition-all duration-500"
+                    className="w-full rounded transition-all duration-700 ease-out"
                     style={{
                       height: `${height}%`,
                       background: isToday ? "var(--accent)" : "var(--border)",
-                      opacity: isToday ? 1 : 0.6,
+                      opacity: isToday ? 1 : 0.5,
                     }}
                   />
-                  <span className="text-[9px] text-[var(--text-muted)]" style={{ fontWeight: isToday ? 600 : 400, color: isToday ? "var(--accent)" : undefined }}>
+                  <span className="text-[10px] text-[var(--text-muted)]" style={{ fontWeight: isToday ? 600 : 400, color: isToday ? "var(--accent)" : undefined }}>
                     {weekDays[i]}
                   </span>
                 </div>
               );
             })}
           </div>
-          <div className="flex justify-between mt-3 pt-3 border-t border-[var(--border-light)]">
-            <span className="text-[10px] text-[var(--text-muted)]">
+          <div className="flex justify-between mt-4 pt-4 border-t border-[var(--border-light)]">
+            <span className="text-[11px] text-[var(--text-muted)]">
               Total: {weekXP.reduce((a, b) => a + b, 0)} XP
             </span>
-            <span className="text-[10px] text-[var(--text-muted)]">
-              Avg: {Math.round(weekXP.reduce((a, b) => a + b, 0) / 7)} XP/day
+            <span className="text-[11px] text-[var(--text-muted)]">
+              Avg: {Math.round(weekXP.reduce((a, b) => a + b, 0) / 7)}/day
             </span>
           </div>
         </div>
       </div>
 
-      {/* Second row: Skill Radar + Active Goals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      {/* Second row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 stagger-children">
         {/* Skill Radar */}
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5">
-          <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium mb-4">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">
             Skills (7-day)
           </h3>
           <div className="flex justify-center">
-            <svg viewBox="0 0 200 200" className="w-40 h-40">
+            <svg viewBox="0 0 200 200" className="w-44 h-44">
               {[0.25, 0.5, 0.75, 1].map((s) => (
                 <polygon key={s} points={getRadarPoints(s)} fill="none" stroke="var(--border)" strokeWidth="0.5" />
               ))}
@@ -154,22 +147,22 @@ export default function Dashboard({
                   <line key={i} x1="100" y1="100" x2={100 + Math.cos(angle) * 80} y2={100 + Math.sin(angle) * 80} stroke="var(--border)" strokeWidth="0.5" />
                 );
               })}
-              <polygon points={getRadarDataPoints(categoryRates)} fill="rgba(232, 168, 73, 0.1)" stroke="var(--accent)" strokeWidth="1.5" />
+              <polygon points={getRadarDataPoints(categoryRates)} fill="rgba(232, 168, 73, 0.1)" stroke="var(--accent)" strokeWidth="1.5" className="transition-all duration-700" />
               {(["productivity", "learning", "health", "mindset"] as Category[]).map((cat, i) => {
                 const angle = (Math.PI / 2) * i - Math.PI / 2;
                 return (
-                  <text key={cat} x={100 + Math.cos(angle) * 95} y={100 + Math.sin(angle) * 95} textAnchor="middle" dominantBaseline="central" fontSize="12">
+                  <text key={cat} x={100 + Math.cos(angle) * 95} y={100 + Math.sin(angle) * 95} textAnchor="middle" dominantBaseline="central" fontSize="13">
                     {CATEGORIES[cat].icon}
                   </text>
                 );
               })}
             </svg>
           </div>
-          <div className="grid grid-cols-4 gap-2 mt-3">
+          <div className="grid grid-cols-4 gap-3 mt-4">
             {(["productivity", "learning", "health", "mindset"] as Category[]).map((cat) => (
               <div key={cat} className="text-center">
                 <div className="text-[10px] text-[var(--text-muted)]">{CATEGORIES[cat].label}</div>
-                <div className="text-xs font-medium" style={{ color: CATEGORIES[cat].color }}>
+                <div className="text-xs font-semibold mt-0.5" style={{ color: CATEGORIES[cat].color }}>
                   {Math.round(categoryRates[cat] * 100)}%
                 </div>
               </div>
@@ -178,52 +171,34 @@ export default function Dashboard({
         </div>
 
         {/* Active Goals */}
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium">
               Active Goals
             </h3>
-            <button
-              onClick={() => onNavigate("goals")}
-              className="text-[11px] text-[var(--accent)] hover:underline font-medium"
-            >
-              View all
+            <button onClick={() => onNavigate("goals")} className="text-[11px] text-[var(--accent)] hover:underline font-medium btn-press">
+              View all →
             </button>
           </div>
           {activeGoals.length === 0 ? (
-            <div className="py-6 text-center">
-              <p className="text-xs text-[var(--text-muted)]">No active goals yet.</p>
-              <button
-                onClick={() => onNavigate("goals")}
-                className="text-xs text-[var(--accent)] hover:underline mt-1"
-              >
+            <div className="py-8 text-center">
+              <p className="text-sm text-[var(--text-muted)] mb-2">No active goals yet.</p>
+              <button onClick={() => onNavigate("goals")} className="text-sm text-[var(--accent)] hover:underline">
                 Create your first goal
               </button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {activeGoals.map((g) => (
                 <div key={g.id}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[13px] text-[var(--text-primary)] font-medium truncate pr-2">
-                      {g.title}
-                    </span>
-                    <span className="text-[11px] text-[var(--purple)] font-medium shrink-0">
-                      {g.progress}%
-                    </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[13px] text-[var(--text-primary)] font-medium truncate pr-3">{g.title}</span>
+                    <span className="text-[11px] text-[var(--purple)] font-semibold shrink-0">{g.progress}%</span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-[var(--border-light)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${g.progress}%`,
-                        background: g.progress >= 100 ? "var(--green)" : "var(--purple)",
-                      }}
-                    />
+                    <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${g.progress}%`, background: "var(--purple)" }} />
                   </div>
-                  {g.deadline && (
-                    <p className="text-[10px] text-[var(--text-muted)] mt-1">Due {g.deadline}</p>
-                  )}
+                  {g.deadline && <p className="text-[10px] text-[var(--text-muted)] mt-1.5">Due {g.deadline}</p>}
                 </div>
               ))}
             </div>
@@ -231,43 +206,29 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Third row: Recent Journal + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Third row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 stagger-children">
         {/* Recent Journal */}
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium">
-              Recent Journal
-            </h3>
-            <button
-              onClick={() => onNavigate("journal")}
-              className="text-[11px] text-[var(--accent)] hover:underline font-medium"
-            >
-              View all
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium">Recent Journal</h3>
+            <button onClick={() => onNavigate("journal")} className="text-[11px] text-[var(--accent)] hover:underline font-medium btn-press">
+              View all →
             </button>
           </div>
           {recentJournal.length === 0 ? (
-            <div className="py-6 text-center">
-              <p className="text-xs text-[var(--text-muted)]">No journal entries yet.</p>
-              <button
-                onClick={() => onNavigate("journal")}
-                className="text-xs text-[var(--accent)] hover:underline mt-1"
-              >
-                Write your first entry
-              </button>
+            <div className="py-8 text-center">
+              <p className="text-sm text-[var(--text-muted)] mb-2">No journal entries yet.</p>
+              <button onClick={() => onNavigate("journal")} className="text-sm text-[var(--accent)] hover:underline">Write your first entry</button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {recentJournal.map((entry) => (
                 <div key={entry.id} className="flex gap-3">
-                  <span className="text-base shrink-0 mt-0.5">{MOODS[entry.mood]?.emoji}</span>
+                  <span className="text-lg shrink-0 mt-0.5">{MOODS[entry.mood]?.emoji}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] text-[var(--text-secondary)] line-clamp-2 journal-text">
-                      {entry.text}
-                    </p>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                      {entry.date} &middot; {entry.time}
-                    </p>
+                    <p className="text-[13px] text-[var(--text-secondary)] line-clamp-2 journal-text">{entry.text}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1.5">{entry.date} &middot; {entry.time}</p>
                   </div>
                 </div>
               ))}
@@ -276,11 +237,9 @@ export default function Dashboard({
         </div>
 
         {/* Quick Actions */}
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5">
-          <h3 className="text-[11px] uppercase tracking-wider text-[var(--text-muted)] font-medium mb-4">
-            Quick Actions
-          </h3>
-          <div className="space-y-1.5">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">Quick Actions</h3>
+          <div className="space-y-1">
             {[
               { label: "Complete today's quests", desc: `${totalHabits - completedToday} remaining`, tab: "quests", icon: "◆" },
               { label: "Set a new goal", desc: `${activeGoals.length} active`, tab: "goals", icon: "◎" },
@@ -290,14 +249,14 @@ export default function Dashboard({
               <button
                 key={action.tab}
                 onClick={() => onNavigate(action.tab)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors hover:bg-[var(--card-hover)]"
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left notion-row"
               >
                 <span className="text-[var(--text-muted)] text-sm w-5 text-center">{action.icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-medium text-[var(--text-primary)]">{action.label}</div>
                   <div className="text-[11px] text-[var(--text-muted)]">{action.desc}</div>
                 </div>
-                <span className="text-[var(--text-muted)] text-xs">→</span>
+                <span className="text-[var(--text-muted)] text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
               </button>
             ))}
           </div>
@@ -315,7 +274,7 @@ function getGreetingTime(): string {
 }
 
 function getWeeklyXP(habits: Habit[], dailyLog: DailyLog): number[] {
-  const result: number[] = [0, 0, 0, 0, 0, 0, 0];
+  const result = [0, 0, 0, 0, 0, 0, 0];
   const now = new Date();
   for (let i = 0; i < 7; i++) {
     const d = new Date(now);
@@ -337,8 +296,7 @@ function getCategoryRates(habits: Habit[], dailyLog: DailyLog): Record<Category,
     for (let i = 0; i < 7; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      const log = dailyLog[dateStr] || {};
+      const log = dailyLog[d.toISOString().split("T")[0]] || {};
       for (const h of catHabits) { total++; if (log[h.id]) completed++; }
     }
     rates[cat] = total > 0 ? completed / total : 0;

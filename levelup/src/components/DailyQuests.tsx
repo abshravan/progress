@@ -25,12 +25,16 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<Category>("productivity");
   const [newXP, setNewXP] = useState(15);
+  const [justToggled, setJustToggled] = useState<string | null>(null);
 
   const today = getTodayString();
   const todayLog = dailyLog[today] || {};
   const completedCount = habits.filter((h) => todayLog[h.id]).length;
 
   const toggleHabit = (habit: Habit) => {
+    setJustToggled(habit.id);
+    setTimeout(() => setJustToggled(null), 400);
+
     const wasComplete = !!todayLog[habit.id];
     const newLog = { ...dailyLog };
     if (!newLog[today]) newLog[today] = {};
@@ -67,7 +71,6 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
     onUpdate(newHabits, dailyLog, profile);
   };
 
-  // Group by category
   const grouped = habits.reduce(
     (acc, h) => {
       acc[h.category] = acc[h.category] || [];
@@ -78,41 +81,59 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
   );
 
   return (
-    <div className="animate-fade-in">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-semibold text-[var(--text-primary)] tracking-tight">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-3xl font-semibold text-[var(--text-primary)] tracking-tight">
           Daily Quests
         </h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 rounded-md text-xs font-medium text-[var(--text-primary)] bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)] transition-colors"
+          className="px-4 py-2 rounded-lg text-xs font-medium text-[var(--text-primary)] bg-[var(--card)] border border-[var(--border)] hover:bg-[var(--card-hover)] transition-all btn-press"
         >
           + New quest
         </button>
       </div>
-      <p className="text-sm text-[var(--text-muted)] mb-6">
+      <p className="text-sm text-[var(--text-muted)] mb-8">
         {completedCount} of {habits.length} completed today
+        {habits.length > 0 && (
+          <span className="ml-2 text-[var(--accent)]">
+            ({Math.round((completedCount / habits.length) * 100)}%)
+          </span>
+        )}
       </p>
 
-      {/* Inline Add Form */}
+      {/* Progress bar for today */}
+      {habits.length > 0 && (
+        <div className="w-full h-1 rounded-full bg-[var(--border-light)] overflow-hidden mb-8">
+          <div
+            className="h-full rounded-full transition-all duration-700 ease-out"
+            style={{
+              width: `${(completedCount / habits.length) * 100}%`,
+              background: completedCount === habits.length ? "var(--green)" : "var(--accent)",
+            }}
+          />
+        </div>
+      )}
+
+      {/* Add Form */}
       {showForm && (
-        <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] p-5 mb-5 animate-slide-down">
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 mb-6 animate-slide-down">
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addHabit()}
             placeholder="Quest name..."
-            className="w-full px-3 py-2 rounded-md bg-[var(--background)] border border-[var(--border)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors mb-3"
+            className="w-full px-4 py-2.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors mb-4"
             autoFocus
           />
-          <div className="flex gap-2 mb-3 flex-wrap">
+          <div className="flex gap-2 mb-4 flex-wrap">
             {(Object.entries(CATEGORIES) as [Category, (typeof CATEGORIES)[Category]][]).map(([key, cat]) => (
               <button
                 key={key}
                 onClick={() => setNewCategory(key)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+                className="px-3.5 py-2 rounded-lg text-xs font-medium transition-all btn-press"
                 style={{
                   background: newCategory === key ? cat.bgColor : "var(--background)",
                   border: `1px solid ${newCategory === key ? cat.color + "55" : "var(--border)"}`,
@@ -123,57 +144,58 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-4 mb-5">
             <span className="text-xs text-[var(--text-muted)] shrink-0">XP reward</span>
             <input type="range" min={5} max={50} step={5} value={newXP} onChange={(e) => setNewXP(Number(e.target.value))} className="flex-1 accent-amber" />
-            <span className="text-xs font-medium text-[var(--accent)] w-6 text-right">{newXP}</span>
+            <span className="text-sm font-semibold text-[var(--accent)] w-8 text-right">{newXP}</span>
           </div>
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => setShowForm(false)} className="px-3 py-1.5 rounded-md text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors">
               Cancel
             </button>
-            <button onClick={addHabit} disabled={!newName.trim()} className="px-4 py-1.5 rounded-md text-xs font-medium bg-[var(--accent)] text-[#191919] disabled:opacity-30 transition-opacity">
-              Create
+            <button onClick={addHabit} disabled={!newName.trim()} className="px-5 py-2 rounded-lg text-xs font-medium bg-[var(--accent)] text-[#191919] disabled:opacity-30 transition-opacity btn-press">
+              Create quest
             </button>
           </div>
         </div>
       )}
 
-      {/* Habits by category */}
+      {/* Habits */}
       {habits.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[var(--border)] p-10 text-center">
-          <p className="text-sm text-[var(--text-muted)] mb-2">No quests yet</p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
+        <div className="rounded-xl border border-dashed border-[var(--border)] p-14 text-center animate-fade-in">
+          <p className="text-base text-[var(--text-muted)] mb-3">No quests yet</p>
+          <button onClick={() => setShowForm(true)} className="text-sm text-[var(--accent)] hover:underline btn-press">
             Create your first quest
           </button>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6 stagger-children">
           {(Object.entries(grouped) as [Category, Habit[]][]).map(([category, catHabits]) => {
             const cat = CATEGORIES[category];
             return (
               <div key={category}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs">{cat.icon}</span>
-                  <h3 className="text-[11px] uppercase tracking-wider font-medium" style={{ color: cat.color }}>
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="text-sm">{cat.icon}</span>
+                  <h3 className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: cat.color }}>
                     {cat.label}
                   </h3>
                   <div className="flex-1 h-px bg-[var(--border-light)]" />
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {catHabits.filter((h) => todayLog[h.id]).length}/{catHabits.length}
+                  </span>
                 </div>
-                <div className="rounded-lg border border-[var(--border-light)] bg-[var(--card)] overflow-hidden divide-y divide-[var(--border-light)]">
+                <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] overflow-hidden divide-y divide-[var(--border-light)]">
                   {catHabits.map((habit) => {
                     const done = !!todayLog[habit.id];
+                    const wasJustToggled = justToggled === habit.id;
                     return (
                       <div
                         key={habit.id}
-                        className="flex items-center gap-3 px-4 py-3 group notion-row"
+                        className="flex items-center gap-4 px-5 py-3.5 group notion-row"
                       >
                         <button
                           onClick={() => toggleHabit(habit)}
-                          className="w-[18px] h-[18px] rounded flex items-center justify-center transition-all duration-150 shrink-0"
+                          className={`w-5 h-5 rounded flex items-center justify-center transition-all duration-200 shrink-0 ${wasJustToggled ? "animate-check-bounce" : ""}`}
                           style={{
                             background: done ? cat.color : "transparent",
                             border: `1.5px solid ${done ? cat.color : "var(--border)"}`,
@@ -186,7 +208,7 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
                           )}
                         </button>
                         <span
-                          className="flex-1 text-[13px] transition-colors"
+                          className="flex-1 text-sm transition-all duration-200"
                           style={{
                             color: done ? "var(--text-muted)" : "var(--text-primary)",
                             textDecoration: done ? "line-through" : "none",
@@ -194,12 +216,12 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
                         >
                           {habit.name}
                         </span>
-                        <span className="text-[11px] font-medium text-[var(--accent)] shrink-0 opacity-60">
+                        <span className="text-[11px] font-medium text-[var(--accent)] shrink-0 opacity-50">
                           +{habit.xp}
                         </span>
                         <button
                           onClick={() => deleteHabit(habit.id)}
-                          className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--pink)] transition-all text-xs ml-1 shrink-0"
+                          className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--pink)] transition-all text-sm ml-1 shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--pink-dim)]"
                         >
                           ×
                         </button>

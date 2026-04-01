@@ -7,6 +7,7 @@ import DailyQuests from "@/components/DailyQuests";
 import Goals from "@/components/Goals";
 import Journal from "@/components/Journal";
 import AICoach from "@/components/AICoach";
+import FeaturesList from "@/components/FeaturesList";
 import {
   type Profile,
   type Habit,
@@ -21,7 +22,7 @@ import {
 } from "@/lib/storage";
 import { getLevelProgress, getTitle, getLevel } from "@/lib/game-data";
 
-type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach";
+type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "features";
 
 const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
   { id: "dashboard", icon: "⌘", label: "Dashboard" },
@@ -29,6 +30,7 @@ const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
   { id: "goals", icon: "◎", label: "Goals" },
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "coach", icon: "◈", label: "AI Coach" },
+  { id: "features", icon: "★", label: "Feature Ideas" },
 ];
 
 export default function Home() {
@@ -46,6 +48,7 @@ export default function Home() {
   } | null>(null);
   const [prevLevel, setPrevLevel] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [pageKey, setPageKey] = useState(0);
 
   useEffect(() => {
     const p = loadProfile();
@@ -69,8 +72,13 @@ export default function Home() {
 
   const handleXPGain = useCallback((amount: number) => {
     setXpPopup(amount);
-    setTimeout(() => setXpPopup(null), 1500);
+    setTimeout(() => setXpPopup(null), 1800);
   }, []);
+
+  const switchTab = (newTab: Tab) => {
+    setTab(newTab);
+    setPageKey((k) => k + 1);
+  };
 
   const calculateStreak = useCallback((): number => {
     let streak = 0;
@@ -92,9 +100,9 @@ export default function Home() {
   if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#191919]">
-        <div className="text-center">
-          <div className="text-2xl mb-3 text-[var(--text-muted)]">⚔️</div>
-          <p className="text-[var(--text-muted)] text-sm font-light">Loading...</p>
+        <div className="text-center animate-pulse">
+          <div className="text-3xl mb-4">⚔️</div>
+          <p className="text-[var(--text-muted)] text-sm font-light tracking-wide">Loading your world...</p>
         </div>
       </div>
     );
@@ -118,34 +126,33 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex bg-[#191919]">
-      {/* Sidebar */}
+      {/* ===== SIDEBAR ===== */}
       <aside
-        className="fixed left-0 top-0 bottom-0 z-40 flex flex-col border-r border-[var(--border-light)] bg-[var(--sidebar)] transition-all duration-200"
-        style={{ width: sidebarCollapsed ? 56 : 240 }}
+        className="fixed left-0 top-0 bottom-0 z-40 flex flex-col border-r border-[var(--border-light)] bg-[var(--sidebar)] transition-all duration-300 ease-out"
+        style={{ width: sidebarCollapsed ? 60 : 260 }}
       >
-        {/* Logo area */}
-        <div className="flex items-center gap-2.5 px-4 h-14 border-b border-[var(--border-light)]">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Profile area */}
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-[var(--border-light)]">
+          {!sidebarCollapsed ? (
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               <div
-                className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold text-white shrink-0"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold text-white shrink-0 animate-pulse-glow"
                 style={{ background: "linear-gradient(135deg, var(--accent), #c77d2e)" }}
               >
                 {profile.name[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+                <div className="text-sm font-medium text-[var(--text-primary)] truncate">
                   {profile.name}
                 </div>
-                <div className="text-[10px] text-[var(--text-muted)]">
+                <div className="text-[11px] text-[var(--text-muted)]">
                   Lv.{level} {title}
                 </div>
               </div>
             </div>
-          )}
-          {sidebarCollapsed && (
+          ) : (
             <div
-              className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold text-white mx-auto"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold text-white mx-auto animate-pulse-glow"
               style={{ background: "linear-gradient(135deg, var(--accent), #c77d2e)" }}
             >
               {profile.name[0].toUpperCase()}
@@ -153,8 +160,7 @@ export default function Home() {
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-xs shrink-0"
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-sm shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--card-hover)]"
           >
             {sidebarCollapsed ? "▸" : "◂"}
           </button>
@@ -162,34 +168,34 @@ export default function Home() {
 
         {/* XP Progress */}
         {!sidebarCollapsed && (
-          <div className="px-4 py-3 border-b border-[var(--border-light)]">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">
+          <div className="px-4 py-3.5 border-b border-[var(--border-light)] animate-fade-in">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-medium">
                 Experience
               </span>
-              <span className="text-[10px] text-[var(--accent)] font-medium">
-                {currentXP}/{nextThreshold} XP
+              <span className="text-[10px] text-[var(--accent)] font-semibold">
+                {currentXP}/{nextThreshold}
               </span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-[var(--border-light)] overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-700"
+                className="h-full rounded-full transition-all duration-1000 ease-out animate-progress"
                 style={{
                   width: `${progress}%`,
                   background: "linear-gradient(90deg, var(--accent), #c77d2e)",
                 }}
               />
             </div>
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-2.5">
               <span className="text-[10px] text-[var(--text-muted)]">
                 {profile.xp.toLocaleString()} total XP
               </span>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px]" style={{ opacity: streak > 0 ? 1 : 0.3 }}>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs" style={{ opacity: streak > 0 ? 1 : 0.3 }}>
                   🔥
                 </span>
-                <span className="text-[10px] text-[var(--accent)] font-medium">
-                  {streak}d streak
+                <span className="text-[10px] text-[var(--accent)] font-semibold">
+                  {streak}d
                 </span>
               </div>
             </div>
@@ -197,141 +203,150 @@ export default function Home() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 py-2 px-2">
-          {NAV_ITEMS.map((item) => {
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-all duration-100 mb-0.5"
-                style={{
-                  background: active ? "var(--card)" : "transparent",
-                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.background = "var(--card-hover)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <span className="text-[13px] shrink-0 w-5 text-center">{item.icon}</span>
-                {!sidebarCollapsed && (
-                  <span className="text-[13px] font-medium">{item.label}</span>
-                )}
-              </button>
-            );
-          })}
+        <nav className="flex-1 py-3 px-2.5 overflow-y-auto scrollbar-hide">
+          <div className="space-y-0.5">
+            {NAV_ITEMS.map((item) => {
+              const active = tab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => switchTab(item.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150"
+                  style={{
+                    background: active ? "var(--card)" : "transparent",
+                    color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                    boxShadow: active ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) e.currentTarget.style.background = "var(--card-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <span className="text-sm shrink-0 w-5 text-center opacity-70">{item.icon}</span>
+                  {!sidebarCollapsed && (
+                    <span className="text-[13px] font-medium">{item.label}</span>
+                  )}
+                  {active && !sidebarCollapsed && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
-        {/* Bottom stats */}
+        {/* Bottom */}
         {!sidebarCollapsed && (
           <div className="px-4 py-3 border-t border-[var(--border-light)]">
             <div className="text-[10px] text-[var(--text-muted)]">
-              LevelUp v1.0
+              LevelUp v1.0 &middot; {new Date().getFullYear()}
             </div>
           </div>
         )}
       </aside>
 
-      {/* Main Content */}
+      {/* ===== MAIN CONTENT ===== */}
       <main
-        className="flex-1 transition-all duration-200"
-        style={{ marginLeft: sidebarCollapsed ? 56 : 240 }}
+        className="flex-1 min-h-screen transition-all duration-300 ease-out"
+        style={{ marginLeft: sidebarCollapsed ? 60 : 260 }}
       >
-        <div className="max-w-4xl mx-auto px-8 py-8 lg:px-12">
-          {tab === "dashboard" && (
-            <Dashboard
-              profile={profile}
-              habits={habits}
-              dailyLog={dailyLog}
-              goals={goals}
-              journal={journal}
-              onNavigate={(t) => setTab(t as Tab)}
-            />
-          )}
-          {tab === "quests" && (
-            <DailyQuests
-              habits={habits}
-              dailyLog={dailyLog}
-              profile={profile}
-              onUpdate={(h, d, p) => {
-                setHabits(h);
-                setDailyLog(d);
-                setProfile(p);
-              }}
-              onXPGain={handleXPGain}
-            />
-          )}
-          {tab === "goals" && (
-            <Goals
-              goals={goals}
-              profile={profile}
-              onUpdate={(g, p) => {
-                setGoals(g);
-                setProfile(p);
-              }}
-              onXPGain={handleXPGain}
-            />
-          )}
-          {tab === "journal" && (
-            <Journal
-              journal={journal}
-              profile={profile}
-              onUpdate={(j, p) => {
-                setJournal(j);
-                setProfile(p);
-              }}
-              onXPGain={handleXPGain}
-            />
-          )}
-          {tab === "coach" && (
-            <AICoach
-              profile={profile}
-              habits={habits}
-              dailyLog={dailyLog}
-              goals={goals}
-              journal={journal}
-              streak={streak}
-            />
-          )}
+        <div className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12 xl:px-16 py-8 lg:py-10" key={pageKey}>
+          <div className="page-enter">
+            {tab === "dashboard" && (
+              <Dashboard
+                profile={profile}
+                habits={habits}
+                dailyLog={dailyLog}
+                goals={goals}
+                journal={journal}
+                onNavigate={(t) => switchTab(t as Tab)}
+              />
+            )}
+            {tab === "quests" && (
+              <DailyQuests
+                habits={habits}
+                dailyLog={dailyLog}
+                profile={profile}
+                onUpdate={(h, d, p) => {
+                  setHabits(h);
+                  setDailyLog(d);
+                  setProfile(p);
+                }}
+                onXPGain={handleXPGain}
+              />
+            )}
+            {tab === "goals" && (
+              <Goals
+                goals={goals}
+                profile={profile}
+                onUpdate={(g, p) => {
+                  setGoals(g);
+                  setProfile(p);
+                }}
+                onXPGain={handleXPGain}
+              />
+            )}
+            {tab === "journal" && (
+              <Journal
+                journal={journal}
+                profile={profile}
+                onUpdate={(j, p) => {
+                  setJournal(j);
+                  setProfile(p);
+                }}
+                onXPGain={handleXPGain}
+              />
+            )}
+            {tab === "coach" && (
+              <AICoach
+                profile={profile}
+                habits={habits}
+                dailyLog={dailyLog}
+                goals={goals}
+                journal={journal}
+                streak={streak}
+              />
+            )}
+            {tab === "features" && <FeaturesList />}
+          </div>
         </div>
       </main>
 
-      {/* XP Popup */}
+      {/* ===== XP POPUP ===== */}
       {xpPopup !== null && (
-        <div className="fixed top-6 right-8 z-50 animate-xp-float pointer-events-none">
-          <div className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent)] text-[#191919]">
+        <div className="fixed top-8 right-10 z-50 animate-xp-float pointer-events-none">
+          <div className="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--accent)] text-[#191919] shadow-lg">
             +{xpPopup} XP
           </div>
         </div>
       )}
 
-      {/* Level Up Modal */}
+      {/* ===== LEVEL UP MODAL ===== */}
       {levelUpModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
-          style={{ background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center animate-modal-backdrop"
+          style={{ background: "rgba(0, 0, 0, 0.7)" }}
         >
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-10 text-center max-w-sm w-full animate-scale-in">
-            <div className="w-16 h-16 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-5">
-              <span className="text-3xl">⚔️</span>
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-12 text-center max-w-md w-full animate-scale-in shadow-2xl">
+            <div className="w-20 h-20 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-6 animate-confetti">
+              <span className="text-4xl">⚔️</span>
             </div>
-            <p className="text-xs uppercase tracking-widest text-[var(--text-muted)] font-medium mb-2">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-muted)] font-medium mb-3">
               Level Up
             </p>
-            <p className="text-4xl font-bold text-[var(--text-primary)] mb-1">
+            <p className="text-5xl font-bold text-[var(--text-primary)] mb-2">
               Level {levelUpModal.level}
             </p>
-            <p className="text-lg text-[var(--accent)] font-medium mb-8">
+            <p className="text-xl text-[var(--accent)] font-medium mb-10">
               {levelUpModal.title}
             </p>
             <button
               onClick={() => setLevelUpModal(null)}
-              className="px-6 py-2.5 rounded-lg text-sm font-medium bg-[var(--accent)] text-[#191919] hover:opacity-90 transition-opacity"
+              className="px-8 py-3 rounded-lg text-sm font-medium bg-[var(--accent)] text-[#191919] btn-press"
             >
-              Continue
+              Continue your journey
             </button>
           </div>
         </div>

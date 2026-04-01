@@ -104,7 +104,7 @@ export default function Onboarding({ onComplete }: Props) {
             <button
               onClick={() => name.trim() && setStep(2)}
               disabled={!name.trim()}
-              className="w-full mt-6 py-3 rounded-lg text-sm font-medium transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+              className="w-full mt-6 py-3 rounded-lg text-sm font-medium transition-all disabled:opacity-20 disabled:cursor-not-allowed btn-press"
               style={{
                 background: name.trim() ? "var(--accent)" : "var(--border)",
                 color: name.trim() ? "#191919" : "var(--text-muted)",
@@ -122,7 +122,7 @@ export default function Onboarding({ onComplete }: Props) {
               Pick habits you want to build. You can always add more later.
             </p>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-3 stagger-children">
               {PRESET_HABITS.map((habit, i) => {
                 const cat = CATEGORIES[habit.category as Category];
                 const isSelected = selected.has(i);
@@ -130,7 +130,7 @@ export default function Onboarding({ onComplete }: Props) {
                   <button
                     key={i}
                     onClick={() => toggle(i)}
-                    className="relative p-4 rounded-lg text-left transition-all duration-150"
+                    className="relative p-4 rounded-xl text-left transition-all duration-200 btn-press"
                     style={{
                       background: isSelected ? cat.bgColor : "var(--card)",
                       border: `1px solid ${isSelected ? cat.color + "55" : "var(--border)"}`,
@@ -172,7 +172,7 @@ export default function Onboarding({ onComplete }: Props) {
               </button>
               <button
                 onClick={start}
-                className="flex-1 py-3 rounded-lg text-sm font-medium transition-all"
+                className="flex-1 py-3 rounded-lg text-sm font-medium transition-all btn-press"
                 style={{ background: "var(--accent)", color: "#191919" }}
               >
                 Start your journey
