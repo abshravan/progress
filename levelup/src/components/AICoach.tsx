@@ -30,24 +30,17 @@ interface Props {
 }
 
 const QUICK_PROMPTS = [
-  "What should I focus on today?",
-  "How can I break my current goal into steps?",
-  "Give me a productivity tip",
-  "Analyze my progress this week",
+  { label: "Today's focus", text: "What should I focus on today?" },
+  { label: "Break down goal", text: "How can I break my current goal into steps?" },
+  { label: "Productivity tip", text: "Give me a productivity tip" },
+  { label: "Weekly analysis", text: "Analyze my progress this week" },
 ];
 
-export default function AICoach({
-  profile,
-  habits,
-  dailyLog,
-  goals,
-  journal,
-  streak,
-}: Props) {
+export default function AICoach({ profile, habits, dailyLog, goals, journal, streak }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: `Greetings, ${profile.name}! I am your AI mentor. I can see your quest log, your goals, and your adventure journal. Ask me anything about your journey, and I shall guide you with wisdom! ⚔️`,
+      content: `Welcome, ${profile.name}. I'm your personal coach — I can see your quests, goals, journal, and progress. Ask me anything about your journey, and I'll provide tailored guidance.`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -58,133 +51,109 @@ export default function AICoach({
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages]);
 
-  const buildContext = () => {
-    const { level } = getLevelProgress(profile.xp);
-    const title = getTitle(level);
-    const today = getTodayString();
-    const todayLog = dailyLog[today] || {};
-    const completedQuests = habits
-      .filter((h) => todayLog[h.id])
-      .map((h) => h.name);
-    const remainingQuests = habits
-      .filter((h) => !todayLog[h.id])
-      .map((h) => h.name);
-    const activeGoals = goals
-      .filter((g) => !g.completed)
-      .map((g) => `${g.title} (${g.progress}%)`)
-      .join(", ");
-    const recentJournal = journal
-      .slice(0, 5)
-      .map((j) => `${j.date}: ${MOODS[j.mood]?.emoji} ${j.text.slice(0, 100)}`)
-      .join("\n");
-
-    return `You are an RPG mentor/coach in a gamified self-improvement app called LevelUp.
-User: ${profile.name} | Level ${level} ${title} | ${profile.xp} XP | ${streak}-day streak
-Today's completed quests: ${completedQuests.join(", ") || "None yet"}
-Today's remaining quests: ${remainingQuests.join(", ") || "All done!"}
-Active goals: ${activeGoals || "None set"}
-Recent journal entries:
-${recentJournal || "No entries yet"}
-
-Be encouraging, use RPG metaphors naturally, give specific actionable advice based on their data. Keep responses concise (2-4 paragraphs). Use emojis sparingly.`;
-  };
-
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     const userMsg: Message = { role: "user", content: text.trim() };
-    const newMessages = [...messages, userMsg];
-    setMessages(newMessages);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
-    // Simulate AI response (since we don't have API access in browser)
     setTimeout(() => {
-      const responses = generateResponse(text, profile, habits, dailyLog, goals, streak);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: responses },
-      ]);
+      const response = generateResponse(text, profile, habits, dailyLog, goals, streak);
+      setMessages((prev) => [...prev, { role: "assistant", content: response }]);
       setLoading(false);
-    }, 1200);
+    }, 1000);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-180px)]">
-      <div className="mb-3">
-        <h2 className="text-xl font-bold text-white">AI Coach</h2>
-        <p className="text-xs text-gray-500">Your wise mentor awaits</p>
+    <div className="animate-fade-in flex flex-col h-[calc(100vh-80px)]">
+      <div className="mb-1">
+        <h1 className="text-2xl font-semibold text-[var(--text-primary)] tracking-tight">
+          AI Coach
+        </h1>
       </div>
+      <p className="text-sm text-[var(--text-muted)] mb-5">
+        Your personal growth mentor, powered by your data
+      </p>
 
-      {/* Quick Prompts */}
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
-        {QUICK_PROMPTS.map((prompt) => (
+      {/* Quick prompts */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {QUICK_PROMPTS.map((p) => (
           <button
-            key={prompt}
-            onClick={() => sendMessage(prompt)}
-            className="shrink-0 px-3 py-1.5 rounded-full text-[11px] font-medium bg-[#12122A] border border-[#1E1E3E] text-gray-400 hover:text-amber-400 hover:border-amber-500/30 transition-all"
+            key={p.text}
+            onClick={() => sendMessage(p.text)}
+            className="px-3 py-1.5 rounded-md text-[11px] font-medium text-[var(--text-secondary)] bg-[var(--card)] border border-[var(--border-light)] hover:border-[var(--border)] hover:text-[var(--text-primary)] transition-all"
           >
-            {prompt}
+            {p.label}
           </button>
         ))}
       </div>
 
-      {/* Messages */}
+      {/* Chat area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-3 pr-1 scrollbar-hide"
+        className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide"
       >
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            {msg.role === "assistant" && (
+              <div className="w-7 h-7 rounded-md bg-[var(--purple-dim)] flex items-center justify-center text-xs shrink-0 mr-3 mt-0.5">
+                ◈
+              </div>
+            )}
             <div
-              className="max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed"
+              className="max-w-[75%] text-[13px] leading-relaxed"
               style={{
-                background:
-                  msg.role === "user"
-                    ? "linear-gradient(135deg, #F59E0B, #D97706)"
-                    : "#12122A",
-                color: msg.role === "user" ? "#0A0A1A" : "#e0e0e0",
-                border:
-                  msg.role === "assistant" ? "1px solid #1E1E3E" : "none",
-                borderBottomRightRadius:
-                  msg.role === "user" ? "4px" : undefined,
-                borderBottomLeftRadius:
-                  msg.role === "assistant" ? "4px" : undefined,
+                color: msg.role === "user" ? "var(--text-primary)" : "var(--text-secondary)",
               }}
             >
-              {msg.content}
+              {msg.role === "user" ? (
+                <div className="px-4 py-2.5 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent)]" style={{ borderColor: "rgba(232, 168, 73, 0.25)" }}>
+                  {msg.content}
+                </div>
+              ) : (
+                <div className="px-4 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border-light)]">
+                  {msg.content.split("\n\n").map((para, j) => (
+                    <p key={j} className={j > 0 ? "mt-3" : ""}>
+                      {para.split("\n").map((line, k) => (
+                        <span key={k}>
+                          {k > 0 && <br />}
+                          {line}
+                        </span>
+                      ))}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="px-4 py-3 rounded-2xl text-sm bg-[#12122A] border border-[#1E1E3E] text-gray-400">
-              <span className="animate-pulse">🧙 Thinking...</span>
+            <div className="w-7 h-7 rounded-md bg-[var(--purple-dim)] flex items-center justify-center text-xs shrink-0 mr-3 mt-0.5">
+              ◈
+            </div>
+            <div className="px-4 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border-light)] text-[13px] text-[var(--text-muted)]">
+              <span className="animate-pulse">Thinking...</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Input */}
-      <div className="flex gap-2 mt-3 pt-3 border-t border-[#1E1E3E]">
+      <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--border-light)]">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-          placeholder="Ask your mentor..."
-          className="flex-1 px-4 py-3 rounded-xl bg-[#12122A] border border-[#1E1E3E] text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/50"
+          placeholder="Ask your coach..."
+          className="flex-1 px-4 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border-light)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
         />
         <button
           onClick={() => sendMessage(input)}
           disabled={!input.trim() || loading}
-          className="px-4 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-30 hover:scale-105 active:scale-95"
-          style={{
-            background: "linear-gradient(135deg, #F59E0B, #D97706)",
-            color: "#0A0A1A",
-          }}
+          className="px-4 py-2.5 rounded-lg text-xs font-medium bg-[var(--accent)] text-[#191919] disabled:opacity-30 transition-opacity"
         >
           Send
         </button>
@@ -211,35 +180,34 @@ function generateResponse(
 
   if (lowerInput.includes("focus") || lowerInput.includes("today")) {
     if (remaining.length === 0) {
-      return `Incredible work, ${profile.name}! You've completed all your daily quests! 🎉\n\nYour dedication is forging you into a true legend. With a ${streak}-day streak, you're building unstoppable momentum.\n\nConsider reviewing your boss battles (goals) — ${activeGoals.length > 0 ? `"${activeGoals[0].title}" is at ${activeGoals[0].progress}%. A push forward there could bring you closer to victory!` : "perhaps it's time to set a new challenge worthy of your growing power!"}`;
+      return `Outstanding work, ${profile.name}. You've completed all your daily quests.\n\nWith a ${streak}-day streak, you're building serious momentum. ${activeGoals.length > 0 ? `Consider pushing forward on "${activeGoals[0].title}" (currently at ${activeGoals[0].progress}%). Even 5% progress compounds over time.` : "It might be a good time to set a new goal to keep challenging yourself."}`;
     }
-    return `Here's your battle plan for today, ${profile.name}! ⚔️\n\nYou've completed ${completed.length}/${habits.length} quests so far. Your remaining quests are: ${remaining.map((h) => h.name).join(", ")}.\n\n${remaining.length <= 2 ? "You're almost there! Just a couple more and you'll have a perfect day!" : `I'd suggest starting with "${remaining[0].name}" — small victories build momentum for the bigger battles ahead.`}\n\n${streak > 0 ? `Your ${streak}-day streak is a testament to your resolve. Don't let it break!` : "Today is a great day to start a new streak!"}`;
+    return `Here's my recommendation for today, ${profile.name}.\n\nYou've completed ${completed.length}/${habits.length} quests so far. Remaining: ${remaining.map((h) => h.name).join(", ")}.\n\n${remaining.length <= 2 ? "You're close to a perfect day. Two more quests and you'll have completed everything." : `Start with "${remaining[0].name}" — building momentum with one small win makes the rest easier.`}\n\n${streak > 0 ? `Your ${streak}-day streak shows real commitment. Keep it going.` : "Today is day one. Make it count."}`;
   }
 
   if (lowerInput.includes("goal") || lowerInput.includes("step") || lowerInput.includes("break")) {
     if (activeGoals.length === 0) {
-      return `You don't have any active boss battles right now, ${profile.name}! 🐉\n\nEvery great hero needs a worthy challenge. Head to the Boss Battles section and set a goal that excites and slightly scares you — that's the sweet spot for growth!\n\nThink about: What's one thing you want to achieve in the next 30 days?`;
+      return `You don't have any active goals right now.\n\nSet a goal that's specific and time-bound. Something like "Complete an online course by end of month" is better than "Learn more." Head to the Goals tab to create one.`;
     }
     const goal = activeGoals[0];
-    return `Let's strategize about "${goal.title}" (currently at ${goal.progress}%)! 🗺️\n\nHere's how I'd break this down:\n\n1. **Define the finish line** — What does 100% look like specifically?\n2. **Next milestone** — What would get you to ${Math.min(goal.progress + 25, 100)}%?\n3. **Daily action** — What's one small thing you can do TODAY toward this goal?\n4. **Remove blockers** — What's the #1 thing slowing you down?\n\nRemember: every boss was defeated one hit at a time. You're at Level ${level} — you have the skills for this!`;
+    return `Let's break down "${goal.title}" (currently at ${goal.progress}%).\n\n1. Define what 100% looks like — be specific about the end state\n2. Identify the next milestone that would get you to ${Math.min(goal.progress + 25, 100)}%\n3. Pick one action you can take today toward that milestone\n4. Remove or delegate the biggest thing slowing you down\n\nProgress isn't always linear. Focus on consistent effort over perfection.`;
   }
 
   if (lowerInput.includes("productivity") || lowerInput.includes("tip")) {
     const tips = [
-      `Here's a powerful technique, ${profile.name}: The "2-Minute Rule" ⏱️\n\nIf a task takes less than 2 minutes, do it immediately. This clears mental clutter and builds momentum. Many of your remaining quests might fall into this category!\n\nAlso, try "environment design" — set up your space so the right actions are the easiest actions. Put your book on your pillow, your workout clothes by the door.`,
-      `Level ${level} strategy unlocked: "Time Blocking" 📋\n\nInstead of a to-do list, assign each quest to a specific time block. Your brain responds better to "I'll read at 7pm" than "I should read today."\n\nPro tip: Do your hardest quest first thing in the morning when your willpower bar is full!`,
-      `Here's a ${getTitle(level)}-tier technique: "Habit Stacking" 🔗\n\nAttach a new habit to an existing one. For example: "After I pour my morning coffee, I will meditate for 10 minutes."\n\nYour current ${habits.length} quests are building strong foundations. The key is connecting them to your daily routines so they become automatic.`,
+      `Try the "two-minute rule," ${profile.name}.\n\nIf something takes less than two minutes, do it now. This prevents small tasks from piling up and creating mental overhead.\n\nAlso consider environment design — make the right actions the default. Put your book on your desk, keep your workout clothes visible.`,
+      `Here's a strategy for Level ${level}: time blocking.\n\nInstead of a vague to-do list, assign each quest to a specific time slot. "Read at 7pm" is more effective than "read today" because it removes the decision of when.\n\nDo your hardest quest first when your energy is highest.`,
+      `Try habit stacking, ${profile.name}.\n\nLink a new habit to one you already do consistently. "After I make coffee, I meditate for 10 minutes."\n\nYour ${habits.length} quests are building a foundation. The goal is to make them automatic — that's when real transformation happens.`,
     ];
     return tips[Math.floor(Math.random() * tips.length)];
   }
 
   if (lowerInput.includes("progress") || lowerInput.includes("analyze") || lowerInput.includes("week")) {
     const totalXPThisWeek = calculateWeekXP(habits, dailyLog);
-    return `Here's your weekly progress report, ${profile.name}! 📊\n\n**Stats:**\n- Total XP this week: ${totalXPThisWeek}\n- Current streak: ${streak} day${streak !== 1 ? "s" : ""}\n- Active goals: ${activeGoals.length}\n- Today's completion: ${completed.length}/${habits.length} quests\n\n${totalXPThisWeek > 200 ? "You're crushing it! Your XP gains show real dedication. 🔥" : totalXPThisWeek > 50 ? "Solid progress! Consistency is building. Push for a bit more each day." : "The journey of a thousand miles begins with a single step. Every XP point counts!"}\n\n${streak >= 7 ? `A ${streak}-day streak! You're entering legendary territory! 🌟` : streak >= 3 ? `${streak} days and counting — you're building real momentum!` : "Focus on building that streak — even one completed quest per day keeps it alive!"}`;
+    return `Weekly progress report for ${profile.name}.\n\nTotal XP this week: ${totalXPThisWeek}\nCurrent streak: ${streak} day${streak !== 1 ? "s" : ""}\nActive goals: ${activeGoals.length}\nToday: ${completed.length}/${habits.length} quests completed\n\n${totalXPThisWeek > 200 ? "Strong week. Your consistency is paying off — this kind of sustained effort leads to real results." : totalXPThisWeek > 50 ? "Steady progress. You're showing up, which is the hardest part. Try to push a little more each day." : "Every journey starts somewhere. Focus on completing just one quest each day to build the habit of showing up."}`;
   }
 
-  // Default response
-  return `Great question, ${profile.name}! 🧙\n\nAs your Level ${level} ${getTitle(level)} mentor, here's what I see: You have ${habits.length} active quests, ${activeGoals.length} boss battles in progress, and a ${streak}-day streak.\n\n${completed.length >= habits.length / 2 ? "You're making excellent progress today! Keep that momentum going." : "There's still time to complete more quests today. Every small action brings XP and builds your streak."}\n\nRemember: in this RPG of life, there are no game overs — only respawn points. What specific area would you like guidance on?`;
+  return `Good question, ${profile.name}.\n\nHere's what I see: ${habits.length} active quests, ${activeGoals.length} goals in progress, and a ${streak}-day streak at Level ${level}.\n\n${completed.length >= habits.length / 2 ? "You're making solid progress today. Keep the momentum going." : "There's still time to make today count. Start with the easiest quest to build momentum."}\n\nWhat specific area would you like to dig into — habits, goals, or general strategy?`;
 }
 
 function calculateWeekXP(habits: Habit[], dailyLog: DailyLog): number {

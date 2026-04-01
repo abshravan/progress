@@ -63,26 +63,26 @@ export const CATEGORIES: Record<
   productivity: {
     label: "Productivity",
     icon: "⚡",
-    color: "#F59E0B",
-    bgColor: "rgba(245, 158, 11, 0.15)",
+    color: "#e8a849",
+    bgColor: "rgba(232, 168, 73, 0.12)",
   },
   learning: {
     label: "Learning",
     icon: "📖",
-    color: "#8B5CF6",
-    bgColor: "rgba(139, 92, 246, 0.15)",
+    color: "#9d7cd8",
+    bgColor: "rgba(157, 124, 216, 0.12)",
   },
   health: {
     label: "Health",
     icon: "💪",
-    color: "#10B981",
-    bgColor: "rgba(16, 185, 129, 0.15)",
+    color: "#73daca",
+    bgColor: "rgba(115, 218, 202, 0.12)",
   },
   mindset: {
     label: "Mindset",
     icon: "🧠",
-    color: "#EC4899",
-    bgColor: "rgba(236, 72, 153, 0.15)",
+    color: "#f7768e",
+    bgColor: "rgba(247, 118, 142, 0.12)",
   },
 };
 

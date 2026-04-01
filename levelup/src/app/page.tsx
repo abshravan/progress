@@ -19,20 +19,16 @@ import {
   loadJournal,
   loadDailyLog,
 } from "@/lib/storage";
-import {
-  getLevelProgress,
-  getTitle,
-  getLevel,
-} from "@/lib/game-data";
+import { getLevelProgress, getTitle, getLevel } from "@/lib/game-data";
 
 type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach";
 
 const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
-  { id: "dashboard", icon: "🏠", label: "Home" },
-  { id: "quests", icon: "⚔️", label: "Quests" },
-  { id: "goals", icon: "🐉", label: "Goals" },
-  { id: "journal", icon: "📜", label: "Journal" },
-  { id: "coach", icon: "🧙", label: "Coach" },
+  { id: "dashboard", icon: "⌘", label: "Dashboard" },
+  { id: "quests", icon: "◆", label: "Daily Quests" },
+  { id: "goals", icon: "◎", label: "Goals" },
+  { id: "journal", icon: "✎", label: "Journal" },
+  { id: "coach", icon: "◈", label: "AI Coach" },
 ];
 
 export default function Home() {
@@ -49,8 +45,8 @@ export default function Home() {
     title: string;
   } | null>(null);
   const [prevLevel, setPrevLevel] = useState(1);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Load data from localStorage
   useEffect(() => {
     const p = loadProfile();
     setProfile(p);
@@ -62,7 +58,6 @@ export default function Home() {
     setLoaded(true);
   }, []);
 
-  // Check for level up
   useEffect(() => {
     if (!profile) return;
     const newLevel = getLevel(profile.xp);
@@ -94,24 +89,17 @@ export default function Home() {
     return streak;
   }, [dailyLog]);
 
-  // Loading screen
   if (!loaded) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background: "linear-gradient(180deg, #0A0A1A 0%, #0F0F2A 100%)",
-        }}
-      >
-        <div className="text-center animate-pulse">
-          <div className="text-4xl mb-3">⚔️</div>
-          <p className="text-gray-500 text-sm">Loading your quest...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#191919]">
+        <div className="text-center">
+          <div className="text-2xl mb-3 text-[var(--text-muted)]">⚔️</div>
+          <p className="text-[var(--text-muted)] text-sm font-light">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Onboarding
   if (!profile) {
     return (
       <Onboarding
@@ -124,89 +112,142 @@ export default function Home() {
     );
   }
 
-  const { level, progress } = getLevelProgress(profile.xp);
+  const { level, progress, currentXP, nextThreshold } = getLevelProgress(profile.xp);
   const title = getTitle(level);
   const streak = calculateStreak();
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{
-        background: "linear-gradient(180deg, #0A0A1A 0%, #0F0F2A 100%)",
-      }}
-    >
-      {/* Header */}
-      <header
-        className="sticky top-0 z-40 px-4 pt-4 pb-3"
-        style={{
-          background: "linear-gradient(180deg, #12122E, transparent)",
-        }}
+    <div className="min-h-screen flex bg-[#191919]">
+      {/* Sidebar */}
+      <aside
+        className="fixed left-0 top-0 bottom-0 z-40 flex flex-col border-r border-[var(--border-light)] bg-[var(--sidebar)] transition-all duration-200"
+        style={{ width: sidebarCollapsed ? 56 : 240 }}
       >
-        <div className="max-w-md mx-auto">
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
+        {/* Logo area */}
+        <div className="flex items-center gap-2.5 px-4 h-14 border-b border-[var(--border-light)]">
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div
+                className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold text-white shrink-0"
+                style={{ background: "linear-gradient(135deg, var(--accent), #c77d2e)" }}
+              >
+                {profile.name[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+                  {profile.name}
+                </div>
+                <div className="text-[10px] text-[var(--text-muted)]">
+                  Lv.{level} {title}
+                </div>
+              </div>
+            </div>
+          )}
+          {sidebarCollapsed && (
             <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center text-lg font-bold text-white shrink-0"
-              style={{
-                background: "linear-gradient(135deg, #F59E0B, #DC2626)",
-              }}
+              className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold text-white mx-auto"
+              style={{ background: "linear-gradient(135deg, var(--accent), #c77d2e)" }}
             >
               {profile.name[0].toUpperCase()}
             </div>
+          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors text-xs shrink-0"
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? "▸" : "◂"}
+          </button>
+        </div>
 
-            {/* Info + XP Bar */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white truncate">
-                    {profile.name}
-                  </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">
-                    Lv.{level}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className="text-sm"
-                    style={{ opacity: streak > 0 ? 1 : 0.3 }}
-                  >
-                    🔥
-                  </span>
-                  <span className="text-xs font-bold text-amber-400">
-                    {streak}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 h-2 rounded-full bg-[#1E1E3E] overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${progress}%`,
-                      background:
-                        "linear-gradient(90deg, #F59E0B, #D97706)",
-                      boxShadow: "0 0 12px rgba(245, 158, 11, 0.4)",
-                    }}
-                  />
-                </div>
-                <span className="text-[10px] text-gray-500 shrink-0">
-                  {title}
+        {/* XP Progress */}
+        {!sidebarCollapsed && (
+          <div className="px-4 py-3 border-b border-[var(--border-light)]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">
+                Experience
+              </span>
+              <span className="text-[10px] text-[var(--accent)] font-medium">
+                {currentXP}/{nextThreshold} XP
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-[var(--border-light)] overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${progress}%`,
+                  background: "linear-gradient(90deg, var(--accent), #c77d2e)",
+                }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[10px] text-[var(--text-muted)]">
+                {profile.xp.toLocaleString()} total XP
+              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px]" style={{ opacity: streak > 0 ? 1 : 0.3 }}>
+                  🔥
+                </span>
+                <span className="text-[10px] text-[var(--accent)] font-medium">
+                  {streak}d streak
                 </span>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex-1 py-2 px-2">
+          {NAV_ITEMS.map((item) => {
+            const active = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setTab(item.id)}
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-all duration-100 mb-0.5"
+                style={{
+                  background: active ? "var(--card)" : "transparent",
+                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = "var(--card-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <span className="text-[13px] shrink-0 w-5 text-center">{item.icon}</span>
+                {!sidebarCollapsed && (
+                  <span className="text-[13px] font-medium">{item.label}</span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom stats */}
+        {!sidebarCollapsed && (
+          <div className="px-4 py-3 border-t border-[var(--border-light)]">
+            <div className="text-[10px] text-[var(--text-muted)]">
+              LevelUp v1.0
+            </div>
+          </div>
+        )}
+      </aside>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 pb-24">
-        <div className="max-w-md mx-auto">
+      <main
+        className="flex-1 transition-all duration-200"
+        style={{ marginLeft: sidebarCollapsed ? 56 : 240 }}
+      >
+        <div className="max-w-4xl mx-auto px-8 py-8 lg:px-12">
           {tab === "dashboard" && (
             <Dashboard
               profile={profile}
               habits={habits}
               dailyLog={dailyLog}
               goals={goals}
+              journal={journal}
               onNavigate={(t) => setTab(t as Tab)}
             />
           )}
@@ -258,52 +299,10 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Bottom Nav */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 px-4 py-2"
-        style={{
-          background: "rgba(13, 13, 34, 0.93)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          borderTop: "1px solid #1E1E3E",
-        }}
-      >
-        <div className="max-w-md mx-auto flex justify-around">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-all duration-200"
-              style={{
-                opacity: tab === item.id ? 1 : 0.5,
-                transform: tab === item.id ? "scale(1.05)" : "scale(1)",
-              }}
-            >
-              <span className="text-lg">{item.icon}</span>
-              <span
-                className="text-[9px] font-semibold"
-                style={{
-                  color: tab === item.id ? "#F59E0B" : "#666",
-                }}
-              >
-                {item.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
-
       {/* XP Popup */}
       {xpPopup !== null && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-xp-float pointer-events-none">
-          <div
-            className="px-4 py-2 rounded-full text-sm font-bold"
-            style={{
-              background: "linear-gradient(135deg, #F59E0B, #D97706)",
-              color: "#0A0A1A",
-              boxShadow: "0 0 20px rgba(245, 158, 11, 0.5)",
-            }}
-          >
+        <div className="fixed top-6 right-8 z-50 animate-xp-float pointer-events-none">
+          <div className="px-3 py-1.5 rounded-md text-xs font-semibold bg-[var(--accent)] text-[#191919]">
             +{xpPopup} XP
           </div>
         </div>
@@ -312,35 +311,27 @@ export default function Home() {
       {/* Level Up Modal */}
       {levelUpModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
-          style={{
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(8px)",
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+          style={{ background: "rgba(0, 0, 0, 0.6)", backdropFilter: "blur(4px)" }}
         >
-          <div
-            className="bg-[#12122A] border border-amber-500/30 rounded-2xl p-8 text-center max-w-sm w-full animate-scale-in"
-            style={{ boxShadow: "0 0 40px rgba(245, 158, 11, 0.2)" }}
-          >
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-amber-400 mb-1">
-              LEVEL UP!
-            </h2>
-            <p className="text-4xl font-bold text-white mb-2">
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-10 text-center max-w-sm w-full animate-scale-in">
+            <div className="w-16 h-16 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-5">
+              <span className="text-3xl">⚔️</span>
+            </div>
+            <p className="text-xs uppercase tracking-widest text-[var(--text-muted)] font-medium mb-2">
+              Level Up
+            </p>
+            <p className="text-4xl font-bold text-[var(--text-primary)] mb-1">
               Level {levelUpModal.level}
             </p>
-            <p className="text-lg text-purple-400 font-semibold mb-6">
+            <p className="text-lg text-[var(--accent)] font-medium mb-8">
               {levelUpModal.title}
             </p>
             <button
               onClick={() => setLevelUpModal(null)}
-              className="px-8 py-3 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
-              style={{
-                background: "linear-gradient(135deg, #F59E0B, #D97706)",
-                color: "#0A0A1A",
-              }}
+              className="px-6 py-2.5 rounded-lg text-sm font-medium bg-[var(--accent)] text-[#191919] hover:opacity-90 transition-opacity"
             >
-              Continue Your Journey
+              Continue
             </button>
           </div>
         </div>
