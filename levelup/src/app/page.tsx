@@ -19,8 +19,13 @@ import {
   loadGoals,
   loadJournal,
   loadDailyLog,
+  downloadExport,
+  importAllData,
+  loadSoundEnabled,
+  saveSoundEnabled,
 } from "@/lib/storage";
 import { getLevelProgress, getTitle, getLevel } from "@/lib/game-data";
+import { playLevelUp, playExport } from "@/lib/sounds";
 
 type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "features";
 
@@ -49,6 +54,10 @@ export default function Home() {
   const [prevLevel, setPrevLevel] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [pageKey, setPageKey] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [toast, setToast] = useState<{ message: string; undoAction?: () => void } | null>(null);
+  const [toastTimer, setToastTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     const p = loadProfile();
@@ -57,6 +66,7 @@ export default function Home() {
     setGoals(loadGoals());
     setJournal(loadJournal());
     setDailyLog(loadDailyLog());
+    setSoundEnabled(loadSoundEnabled());
     if (p) setPrevLevel(getLevel(p.xp));
     setLoaded(true);
   }, []);
@@ -67,6 +77,7 @@ export default function Home() {
     if (newLevel > prevLevel) {
       setLevelUpModal({ level: newLevel, title: getTitle(newLevel) });
       setPrevLevel(newLevel);
+      playLevelUp();
     }
   }, [profile?.xp, prevLevel, profile]);
 
@@ -78,6 +89,44 @@ export default function Home() {
   const switchTab = (newTab: Tab) => {
     setTab(newTab);
     setPageKey((k) => k + 1);
+  };
+
+  const showToast = useCallback((message: string, undoAction?: () => void) => {
+    if (toastTimer) clearTimeout(toastTimer);
+    setToast({ message, undoAction });
+    const timer = setTimeout(() => setToast(null), 4000);
+    setToastTimer(timer);
+  }, [toastTimer]);
+
+  const handleExport = () => {
+    downloadExport();
+    playExport();
+    showToast("Data exported successfully");
+  };
+
+  const handleImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (importAllData(text)) {
+        setProfile(loadProfile());
+        setHabits(loadHabits());
+        setGoals(loadGoals());
+        setJournal(loadJournal());
+        setDailyLog(loadDailyLog());
+        showToast("Data imported successfully! Refreshing...");
+        setShowImportDialog(false);
+      } else {
+        showToast("Import failed — invalid file format");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    saveSoundEnabled(next);
   };
 
   const calculateStreak = useCallback((): number => {
@@ -239,9 +288,29 @@ export default function Home() {
 
         {/* Bottom */}
         {!sidebarCollapsed && (
-          <div className="px-4 py-3 border-t border-[var(--border-light)]">
-            <div className="text-[10px] text-[var(--text-muted)]">
-              LevelUp v1.0 &middot; {new Date().getFullYear()}
+          <div className="px-3 py-3 border-t border-[var(--border-light)] space-y-1">
+            <div className="flex gap-1">
+              <button
+                onClick={handleExport}
+                className="flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+              >
+                <span className="text-xs">↓</span> Export
+              </button>
+              <button
+                onClick={() => setShowImportDialog(true)}
+                className="flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+              >
+                <span className="text-xs">↑</span> Import
+              </button>
+              <button
+                onClick={toggleSound}
+                className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+              >
+                {soundEnabled ? "🔊" : "🔇"}
+              </button>
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] px-1">
+              LevelUp v1.1 &middot; {new Date().getFullYear()}
             </div>
           </div>
         )}
@@ -275,6 +344,7 @@ export default function Home() {
                   setProfile(p);
                 }}
                 onXPGain={handleXPGain}
+                onToast={showToast}
               />
             )}
             {tab === "goals" && (
@@ -319,6 +389,73 @@ export default function Home() {
         <div className="fixed top-8 right-10 z-50 animate-xp-float pointer-events-none">
           <div className="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--accent)] text-[#191919] shadow-lg">
             +{xpPopup} XP
+          </div>
+        </div>
+      )}
+
+      {/* ===== TOAST ===== */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-2xl">
+            <span className="text-sm text-[var(--text-primary)]">{toast.message}</span>
+            {toast.undoAction && (
+              <button
+                onClick={() => {
+                  toast.undoAction?.();
+                  setToast(null);
+                }}
+                className="text-xs font-semibold text-[var(--accent)] hover:underline shrink-0 btn-press"
+              >
+                Undo
+              </button>
+            )}
+            <button
+              onClick={() => setToast(null)}
+              className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-sm ml-1 shrink-0"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== IMPORT DIALOG ===== */}
+      {showImportDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center animate-modal-backdrop"
+          style={{ background: "rgba(0, 0, 0, 0.7)" }}
+          onClick={() => setShowImportDialog(false)}
+        >
+          <div
+            className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 max-w-md w-full animate-scale-in shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">Import Data</h2>
+            <p className="text-sm text-[var(--text-muted)] mb-6">
+              Select a LevelUp backup JSON file. This will overwrite your current data.
+            </p>
+            <label className="block w-full p-8 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] transition-colors cursor-pointer text-center">
+              <div className="text-2xl mb-2">📁</div>
+              <div className="text-sm text-[var(--text-secondary)] mb-1">Click to select file</div>
+              <div className="text-[11px] text-[var(--text-muted)]">JSON files only</div>
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImport(file);
+                }}
+              />
+            </label>
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowImportDialog(false)}
+                className="px-4 py-2 rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

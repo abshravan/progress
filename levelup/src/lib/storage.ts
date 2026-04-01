@@ -92,3 +92,130 @@ export function saveDailyLog(d: DailyLog) {
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
+
+// ===== DATA EXPORT/IMPORT =====
+export function exportAllData(): string {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profile: loadProfile(),
+    habits: loadHabits(),
+    goals: loadGoals(),
+    journal: loadJournal(),
+    dailyLog: loadDailyLog(),
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+export function downloadExport(): void {
+  const data = exportAllData();
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `levelup-backup-${new Date().toISOString().split("T")[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function importAllData(jsonString: string): boolean {
+  try {
+    const data = JSON.parse(jsonString);
+    if (!data.profile || !data.habits) return false;
+    if (data.profile) saveProfile(data.profile);
+    if (data.habits) saveHabits(data.habits);
+    if (data.goals) saveGoals(data.goals);
+    if (data.journal) saveJournal(data.journal);
+    if (data.dailyLog) saveDailyLog(data.dailyLog);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ===== PERSONAL RECORDS =====
+export interface PersonalRecords {
+  longestStreak: number;
+  maxXPInDay: number;
+  totalQuestsCompleted: number;
+  totalJournalEntries: number;
+  totalGoalsCompleted: number;
+  mostProductiveDay: string;
+}
+
+export function calculateRecords(): PersonalRecords {
+  const habits = loadHabits();
+  const dailyLog = loadDailyLog();
+  const journal = loadJournal();
+  const goals = loadGoals();
+
+  // Longest streak
+  const dates = Object.keys(dailyLog).sort();
+  let longestStreak = 0;
+  let currentStreak = 0;
+  let prevDate: Date | null = null;
+  for (const dateStr of dates) {
+    const log = dailyLog[dateStr];
+    if (log && Object.values(log).some(Boolean)) {
+      const d = new Date(dateStr + "T12:00:00");
+      if (prevDate && d.getTime() - prevDate.getTime() === 86400000) {
+        currentStreak++;
+      } else {
+        currentStreak = 1;
+      }
+      if (currentStreak > longestStreak) longestStreak = currentStreak;
+      prevDate = d;
+    } else {
+      currentStreak = 0;
+      prevDate = null;
+    }
+  }
+
+  // Max XP in a day & most productive day
+  let maxXPInDay = 0;
+  let mostProductiveDay = "";
+  for (const dateStr of Object.keys(dailyLog)) {
+    const log = dailyLog[dateStr];
+    let dayXP = 0;
+    for (const h of habits) {
+      if (log[h.id]) dayXP += h.xp;
+    }
+    if (dayXP > maxXPInDay) {
+      maxXPInDay = dayXP;
+      mostProductiveDay = dateStr;
+    }
+  }
+
+  // Total quests completed
+  let totalQuestsCompleted = 0;
+  for (const log of Object.values(dailyLog)) {
+    totalQuestsCompleted += Object.values(log).filter(Boolean).length;
+  }
+
+  return {
+    longestStreak,
+    maxXPInDay,
+    totalQuestsCompleted,
+    totalJournalEntries: journal.length,
+    totalGoalsCompleted: goals.filter((g) => g.completed).length,
+    mostProductiveDay,
+  };
+}
+
+// ===== SOUND EFFECTS =====
+export function loadSoundEnabled(): boolean {
+  return load<boolean>("levelup-sound-enabled", true);
+}
+
+export function saveSoundEnabled(enabled: boolean): void {
+  save("levelup-sound-enabled", enabled);
+}
+
+// ===== DAILY BONUS =====
+export function loadDailyBonusClaimed(): Record<string, boolean> {
+  return load<Record<string, boolean>>("levelup-daily-bonus", {});
+}
+
+export function saveDailyBonusClaimed(data: Record<string, boolean>): void {
+  save("levelup-daily-bonus", data);
+}

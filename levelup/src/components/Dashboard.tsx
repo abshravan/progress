@@ -1,11 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   type Habit,
   type DailyLog,
   type Goal,
   type Profile,
   type JournalEntry,
+  type PersonalRecords,
+  calculateRecords,
 } from "@/lib/storage";
 import {
   CATEGORIES,
@@ -26,6 +29,12 @@ interface Props {
 }
 
 export default function Dashboard({ profile, habits, dailyLog, goals, journal, onNavigate }: Props) {
+  const [records, setRecords] = useState<PersonalRecords | null>(null);
+
+  useEffect(() => {
+    setRecords(calculateRecords());
+  }, []);
+
   const today = getTodayString();
   const todayLog = dailyLog[today] || {};
   const completedToday = habits.filter((h) => todayLog[h.id]).length;
@@ -236,6 +245,41 @@ export default function Dashboard({ profile, habits, dailyLog, goals, journal, o
           )}
         </div>
 
+        {/* Personal Records */}
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">Personal Records</h3>
+          {records ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Longest Streak", value: `${records.longestStreak}d`, icon: "🔥", color: "var(--accent)" },
+                { label: "Best Day XP", value: `${records.maxXPInDay}`, icon: "⚡", color: "var(--accent)" },
+                { label: "Quests Done", value: `${records.totalQuestsCompleted}`, icon: "◆", color: "var(--green)" },
+                { label: "Goals Crushed", value: `${records.totalGoalsCompleted}`, icon: "◎", color: "var(--purple)" },
+                { label: "Journal Entries", value: `${records.totalJournalEntries}`, icon: "✎", color: "var(--blue)" },
+                { label: "Best Day", value: records.mostProductiveDay ? new Date(records.mostProductiveDay + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—", icon: "📅", color: "var(--pink)" },
+              ].map((rec) => (
+                <div key={rec.label} className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm shrink-0"
+                    style={{ background: rec.color + "18" }}
+                  >
+                    {rec.icon}
+                  </div>
+                  <div>
+                    <div className="text-base font-bold text-[var(--text-primary)]">{rec.value}</div>
+                    <div className="text-[10px] text-[var(--text-muted)]">{rec.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-[var(--text-muted)]">Loading records...</div>
+          )}
+        </div>
+      </div>
+
+      {/* Fourth row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 stagger-children">
         {/* Quick Actions */}
         <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
           <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">Quick Actions</h3>
