@@ -219,3 +219,59 @@ export function loadDailyBonusClaimed(): Record<string, boolean> {
 export function saveDailyBonusClaimed(data: Record<string, boolean>): void {
   save("levelup-daily-bonus", data);
 }
+
+// ===== THEME =====
+export type ThemeId = "tokyo-night" | "light" | "dracula" | "nord" | "catppuccin";
+
+export function loadTheme(): ThemeId {
+  return load<ThemeId>("levelup-theme", "tokyo-night");
+}
+
+export function saveTheme(theme: ThemeId): void {
+  save("levelup-theme", theme);
+}
+
+// ===== BADGES =====
+export function loadUnlockedBadges(): string[] {
+  return load<string[]>("levelup-badges", []);
+}
+
+export function saveUnlockedBadges(badges: string[]): void {
+  save("levelup-badges", badges);
+}
+
+// ===== WEEKLY CHALLENGES =====
+export interface WeeklyChallenge {
+  id: string;
+  title: string;
+  description: string;
+  target: number;
+  progress: number;
+  xpReward: number;
+  completed: boolean;
+  weekStart: string;
+}
+
+export function loadWeeklyChallenges(): WeeklyChallenge[] {
+  return load<WeeklyChallenge[]>("levelup-weekly-challenges", []);
+}
+
+export function saveWeeklyChallenges(c: WeeklyChallenge[]): void {
+  save("levelup-weekly-challenges", c);
+}
+
+// ===== POMODORO =====
+export interface PomodoroSession {
+  date: string;
+  habitId?: string;
+  duration: number;
+  completed: boolean;
+}
+
+export function loadPomodoroSessions(): PomodoroSession[] {
+  return load<PomodoroSession[]>("levelup-pomodoro", []);
+}
+
+export function savePomodoroSessions(s: PomodoroSession[]): void {
+  save("levelup-pomodoro", s);
+}
