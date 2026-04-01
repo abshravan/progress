@@ -9,8 +9,11 @@ import {
   saveDailyLog,
   saveProfile,
   generateId,
+  loadDailyBonusClaimed,
+  saveDailyBonusClaimed,
 } from "@/lib/storage";
 import { CATEGORIES, type Category, getTodayString } from "@/lib/game-data";
+import { playQuestComplete, playQuestUndo, playBonusXP } from "@/lib/sounds";
 
 interface Props {
   habits: Habit[];
@@ -18,18 +21,43 @@ interface Props {
   profile: Profile;
   onUpdate: (h: Habit[], d: DailyLog, p: Profile) => void;
   onXPGain: (amount: number) => void;
+  onToast?: (message: string, undoAction?: () => void) => void;
 }
 
-export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPGain }: Props) {
+export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPGain, onToast }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<Category>("productivity");
   const [newXP, setNewXP] = useState(15);
   const [justToggled, setJustToggled] = useState<string | null>(null);
+  const [bonusClaimed, setBonusClaimed] = useState(false);
 
   const today = getTodayString();
   const todayLog = dailyLog[today] || {};
   const completedCount = habits.filter((h) => todayLog[h.id]).length;
+  const allComplete = habits.length > 0 && completedCount === habits.length;
+
+  // Check daily bonus on all-complete
+  const checkDailyBonus = (newProfile: Profile, newLog: DailyLog) => {
+    const newTodayLog = newLog[today] || {};
+    const allDone = habits.length > 0 && habits.every((h) => newTodayLog[h.id]);
+    if (allDone && !bonusClaimed) {
+      const claimed = loadDailyBonusClaimed();
+      if (!claimed[today]) {
+        const bonusXP = Math.round(habits.reduce((sum, h) => sum + h.xp, 0) * 0.5);
+        claimed[today] = true;
+        saveDailyBonusClaimed(claimed);
+        setBonusClaimed(true);
+        const bonusProfile = { ...newProfile, xp: newProfile.xp + bonusXP };
+        saveProfile(bonusProfile);
+        playBonusXP();
+        onXPGain(bonusXP);
+        onToast?.(`Daily Bonus! +${bonusXP} XP for completing all quests`);
+        return bonusProfile;
+      }
+    }
+    return newProfile;
+  };
 
   const toggleHabit = (habit: Habit) => {
     setJustToggled(habit.id);
@@ -44,13 +72,34 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
       saveDailyLog(newLog);
       saveProfile(newProfile);
       onUpdate(habits, newLog, newProfile);
+      playQuestUndo();
+      onToast?.(`Unchecked "${habit.name}"`, () => {
+        // Undo: re-complete
+        const undoLog = { ...newLog };
+        undoLog[today][habit.id] = true;
+        const undoProfile = { ...newProfile, xp: newProfile.xp + habit.xp };
+        saveDailyLog(undoLog);
+        saveProfile(undoProfile);
+        onUpdate(habits, undoLog, undoProfile);
+      });
     } else {
       newLog[today][habit.id] = true;
-      const newProfile = { ...profile, xp: profile.xp + habit.xp };
+      let newProfile = { ...profile, xp: profile.xp + habit.xp };
       saveDailyLog(newLog);
       saveProfile(newProfile);
+      playQuestComplete();
+      newProfile = checkDailyBonus(newProfile, newLog);
       onUpdate(habits, newLog, newProfile);
       onXPGain(habit.xp);
+      onToast?.(`Completed "${habit.name}" +${habit.xp} XP`, () => {
+        // Undo: uncomplete
+        const undoLog = { ...newLog };
+        delete undoLog[today][habit.id];
+        const undoProfile = { ...newProfile, xp: Math.max(0, newProfile.xp - habit.xp) };
+        saveDailyLog(undoLog);
+        saveProfile(undoProfile);
+        onUpdate(habits, undoLog, undoProfile);
+      });
     }
   };
 
@@ -113,6 +162,32 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
               background: completedCount === habits.length ? "var(--green)" : "var(--accent)",
             }}
           />
+        </div>
+      )}
+
+      {/* Daily Bonus Banner */}
+      {habits.length > 0 && (
+        <div
+          className="rounded-xl border p-4 mb-6 flex items-center gap-4 transition-all duration-500"
+          style={{
+            borderColor: allComplete ? "rgba(115, 218, 202, 0.3)" : "var(--border-light)",
+            background: allComplete ? "rgba(115, 218, 202, 0.08)" : "var(--card)",
+          }}
+        >
+          <div className="text-2xl">{allComplete ? "🏆" : "🎯"}</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium" style={{ color: allComplete ? "var(--green)" : "var(--text-primary)" }}>
+              {allComplete ? "Daily Bonus Claimed!" : "Daily Bonus"}
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
+              {allComplete
+                ? "You completed all quests today — 50% bonus XP awarded!"
+                : `Complete all ${habits.length} quests for +${Math.round(habits.reduce((s, h) => s + h.xp, 0) * 0.5)} bonus XP`}
+            </div>
+          </div>
+          <div className="text-xs font-semibold shrink-0" style={{ color: allComplete ? "var(--green)" : "var(--text-muted)" }}>
+            {completedCount}/{habits.length}
+          </div>
         </div>
       )}
 
