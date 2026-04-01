@@ -66,23 +66,23 @@ export default function AICoach({ profile, habits, dailyLog, goals, journal, str
   };
 
   return (
-    <div className="animate-fade-in flex flex-col h-[calc(100vh-80px)]">
-      <div className="mb-1">
-        <h1 className="text-2xl font-semibold text-[var(--text-primary)] tracking-tight">
+    <div className="flex flex-col h-[calc(100vh-80px)]">
+      <div className="mb-2">
+        <h1 className="text-3xl font-semibold text-[var(--text-primary)] tracking-tight">
           AI Coach
         </h1>
       </div>
-      <p className="text-sm text-[var(--text-muted)] mb-5">
+      <p className="text-sm text-[var(--text-muted)] mb-6">
         Your personal growth mentor, powered by your data
       </p>
 
       {/* Quick prompts */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-5 flex-wrap">
         {QUICK_PROMPTS.map((p) => (
           <button
             key={p.text}
             onClick={() => sendMessage(p.text)}
-            className="px-3 py-1.5 rounded-md text-[11px] font-medium text-[var(--text-secondary)] bg-[var(--card)] border border-[var(--border-light)] hover:border-[var(--border)] hover:text-[var(--text-primary)] transition-all"
+            className="px-3.5 py-2 rounded-lg text-[11px] font-medium text-[var(--text-secondary)] bg-[var(--card)] border border-[var(--border-light)] hover:border-[var(--border)] hover:text-[var(--text-primary)] transition-all btn-press"
           >
             {p.label}
           </button>
@@ -95,9 +95,9 @@ export default function AICoach({ profile, habits, dailyLog, goals, journal, str
         className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-hide"
       >
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`} style={{ animationDelay: `${i * 50}ms` }}>
             {msg.role === "assistant" && (
-              <div className="w-7 h-7 rounded-md bg-[var(--purple-dim)] flex items-center justify-center text-xs shrink-0 mr-3 mt-0.5">
+              <div className="w-8 h-8 rounded-lg bg-[var(--purple-dim)] flex items-center justify-center text-sm shrink-0 mr-3 mt-0.5">
                 ◈
               </div>
             )}
@@ -108,11 +108,11 @@ export default function AICoach({ profile, habits, dailyLog, goals, journal, str
               }}
             >
               {msg.role === "user" ? (
-                <div className="px-4 py-2.5 rounded-lg bg-[var(--accent-dim)] border border-[var(--accent)]" style={{ borderColor: "rgba(232, 168, 73, 0.25)" }}>
+                <div className="px-4 py-3 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent)]" style={{ borderColor: "rgba(232, 168, 73, 0.25)" }}>
                   {msg.content}
                 </div>
               ) : (
-                <div className="px-4 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border-light)]">
+                <div className="px-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border-light)]">
                   {msg.content.split("\n\n").map((para, j) => (
                     <p key={j} className={j > 0 ? "mt-3" : ""}>
                       {para.split("\n").map((line, k) => (
@@ -130,10 +130,10 @@ export default function AICoach({ profile, habits, dailyLog, goals, journal, str
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="w-7 h-7 rounded-md bg-[var(--purple-dim)] flex items-center justify-center text-xs shrink-0 mr-3 mt-0.5">
+            <div className="w-8 h-8 rounded-lg bg-[var(--purple-dim)] flex items-center justify-center text-sm shrink-0 mr-3 mt-0.5">
               ◈
             </div>
-            <div className="px-4 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border-light)] text-[13px] text-[var(--text-muted)]">
+            <div className="px-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border-light)] text-[13px] text-[var(--text-muted)]">
               <span className="animate-pulse">Thinking...</span>
             </div>
           </div>
@@ -141,19 +141,19 @@ export default function AICoach({ profile, habits, dailyLog, goals, journal, str
       </div>
 
       {/* Input */}
-      <div className="flex gap-2 mt-4 pt-4 border-t border-[var(--border-light)]">
+      <div className="flex gap-3 mt-5 pt-5 border-t border-[var(--border-light)]">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
           placeholder="Ask your coach..."
-          className="flex-1 px-4 py-2.5 rounded-lg bg-[var(--card)] border border-[var(--border-light)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+          className="flex-1 px-4 py-3 rounded-xl bg-[var(--card)] border border-[var(--border-light)] text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
         />
         <button
           onClick={() => sendMessage(input)}
           disabled={!input.trim() || loading}
-          className="px-4 py-2.5 rounded-lg text-xs font-medium bg-[var(--accent)] text-[#191919] disabled:opacity-30 transition-opacity"
+          className="px-5 py-3 rounded-xl text-xs font-medium bg-[var(--accent)] text-[#191919] disabled:opacity-30 transition-opacity btn-press"
         >
           Send
         </button>
