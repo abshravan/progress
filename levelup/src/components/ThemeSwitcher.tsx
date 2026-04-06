@@ -1,24 +1,56 @@
 "use client";
 
-import { type ThemeId, saveTheme } from "@/lib/storage";
+import { type ThemeId, saveTheme, loadAutoTheme, saveAutoTheme } from "@/lib/storage";
 import { THEMES } from "@/lib/game-data";
 
 interface Props {
   currentTheme: ThemeId;
   onThemeChange: (theme: ThemeId) => void;
+  autoTheme?: boolean;
+  onAutoThemeChange?: (enabled: boolean) => void;
 }
 
-export default function ThemeSwitcher({ currentTheme, onThemeChange }: Props) {
+export default function ThemeSwitcher({ currentTheme, onThemeChange, autoTheme, onAutoThemeChange }: Props) {
   const handleChange = (themeId: ThemeId) => {
     saveTheme(themeId);
     onThemeChange(themeId);
     applyTheme(themeId);
+    // Disable auto-theme when manually picking
+    if (autoTheme && onAutoThemeChange) {
+      saveAutoTheme(false);
+      onAutoThemeChange(false);
+    }
+  };
+
+  const toggleAuto = () => {
+    const next = !autoTheme;
+    saveAutoTheme(next);
+    onAutoThemeChange?.(next);
+    if (next) {
+      applyAutoTheme(onThemeChange);
+    }
   };
 
   return (
     <div className="space-y-2">
+      {/* Auto toggle */}
+      <button
+        onClick={toggleAuto}
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all"
+        style={{
+          background: autoTheme ? "var(--accent-dim)" : "transparent",
+          border: autoTheme ? "1px solid var(--accent)" + "44" : "1px solid transparent",
+        }}
+      >
+        <span className="text-sm">🌓</span>
+        <span className="text-[13px] font-medium" style={{ color: autoTheme ? "var(--accent)" : "var(--text-secondary)" }}>
+          Auto (system)
+        </span>
+        {autoTheme && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />}
+      </button>
+      <div className="h-px bg-[var(--border-light)] my-1" />
       {(Object.entries(THEMES) as [ThemeId, (typeof THEMES)[ThemeId]][]).map(([id, theme]) => {
-        const isActive = currentTheme === id;
+        const isActive = currentTheme === id && !autoTheme;
         return (
           <button
             key={id}
@@ -27,9 +59,9 @@ export default function ThemeSwitcher({ currentTheme, onThemeChange }: Props) {
             style={{
               background: isActive ? "var(--card)" : "transparent",
               border: isActive ? "1px solid var(--border)" : "1px solid transparent",
+              opacity: autoTheme ? 0.5 : 1,
             }}
           >
-            {/* Color preview */}
             <div className="flex gap-1 shrink-0">
               {theme.preview.map((color, i) => (
                 <div key={i} className="w-4 h-4 rounded-sm" style={{ background: color }} />
@@ -87,4 +119,23 @@ export function applyTheme(themeId: ThemeId) {
       root.style.setProperty(key, value);
     }
   }
+}
+
+export function applyAutoTheme(onThemeChange?: (theme: ThemeId) => void) {
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const themeId: ThemeId = prefersDark ? "tokyo-night" : "light";
+  saveTheme(themeId);
+  applyTheme(themeId);
+  onThemeChange?.(themeId);
+}
+
+export function setupAutoThemeListener(onThemeChange: (theme: ThemeId) => void): () => void {
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  const handler = () => {
+    if (loadAutoTheme()) {
+      applyAutoTheme(onThemeChange);
+    }
+  };
+  mq.addEventListener("change", handler);
+  return () => mq.removeEventListener("change", handler);
 }

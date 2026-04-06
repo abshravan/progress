@@ -12,8 +12,11 @@ import Analytics from "@/components/Analytics";
 import Badges from "@/components/Badges";
 import PomodoroTimer from "@/components/PomodoroTimer";
 import CommandPalette from "@/components/CommandPalette";
-import ThemeSwitcher, { applyTheme } from "@/components/ThemeSwitcher";
+import ThemeSwitcher, { applyTheme, applyAutoTheme, setupAutoThemeListener } from "@/components/ThemeSwitcher";
 import WeeklyChallenges from "@/components/WeeklyChallenges";
+import XPShop from "@/components/XPShop";
+import MonthlyRecap from "@/components/MonthlyRecap";
+import FocusMode from "@/components/FocusMode";
 import {
   type Profile,
   type Habit,
@@ -38,11 +41,12 @@ import {
   loadStreakFreezes,
   saveStreakFreezes,
   saveProfile,
+  loadAutoTheme,
 } from "@/lib/storage";
 import { getLevelProgress, getTitle, getLevel, STREAK_FREEZE_COST } from "@/lib/game-data";
 import { playLevelUp, playExport } from "@/lib/sounds";
 
-type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "analytics" | "badges" | "features";
+type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "analytics" | "badges" | "shop" | "features";
 
 const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
   { id: "dashboard", icon: "⌘", label: "Dashboard" },
@@ -51,6 +55,7 @@ const NAV_ITEMS: { id: Tab; icon: string; label: string }[] = [
   { id: "journal", icon: "✎", label: "Journal" },
   { id: "analytics", icon: "◧", label: "Analytics" },
   { id: "badges", icon: "✦", label: "Badges" },
+  { id: "shop", icon: "💰", label: "XP Shop" },
   { id: "coach", icon: "◈", label: "AI Coach" },
   { id: "features", icon: "★", label: "Feature Ideas" },
 ];
@@ -81,6 +86,8 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>("cozy");
   const [streakFreezes, setStreakFreezes] = useState<StreakFreezeData>({ available: 0, usedDates: [] });
   const [confettiParticles, setConfettiParticles] = useState<{ id: number; x: number; y: number; color: string; delay: number }[]>([]);
+  const [focusMode, setFocusMode] = useState(false);
+  const [autoTheme, setAutoTheme] = useState(false);
 
   useEffect(() => {
     const p = loadProfile();
@@ -95,9 +102,19 @@ export default function Home() {
     applyTheme(theme);
     setViewMode(loadViewMode());
     setStreakFreezes(loadStreakFreezes());
+    const isAutoTheme = loadAutoTheme();
+    setAutoTheme(isAutoTheme);
+    if (isAutoTheme) applyAutoTheme(setCurrentTheme);
     if (p) setPrevLevel(getLevel(p.xp));
     setLoaded(true);
   }, []);
+
+  // Auto-theme system listener
+  useEffect(() => {
+    if (!autoTheme) return;
+    const cleanup = setupAutoThemeListener(setCurrentTheme);
+    return cleanup;
+  }, [autoTheme]);
 
   // Keyboard shortcuts: Cmd+K
   useEffect(() => {
@@ -224,7 +241,9 @@ export default function Home() {
     { id: "nav-analytics", label: "Go to Analytics", icon: "◧", action: () => switchTab("analytics"), keywords: ["stats", "charts", "heatmap"] },
     { id: "nav-badges", label: "Go to Badges", icon: "✦", action: () => switchTab("badges"), keywords: ["achievements"] },
     { id: "nav-coach", label: "Go to AI Coach", icon: "◈", action: () => switchTab("coach"), keywords: ["ai", "help"] },
+    { id: "nav-shop", label: "Go to XP Shop", icon: "💰", action: () => switchTab("shop"), keywords: ["buy", "spend", "rewards"] },
     { id: "nav-features", label: "Go to Feature Ideas", icon: "★", action: () => switchTab("features") },
+    { id: "focus", label: "Focus Mode", description: "Minimal distraction-free quest UI", icon: "🎯", action: () => setFocusMode(true), keywords: ["zen", "concentrate"] },
     { id: "export", label: "Export Data", description: "Download backup as JSON", icon: "↓", action: handleExport, keywords: ["backup", "download"] },
     { id: "import", label: "Import Data", description: "Restore from backup file", icon: "↑", action: () => setShowImportDialog(true), keywords: ["restore", "upload"] },
     { id: "theme", label: "Change Theme", description: "Switch color theme", icon: "🎨", action: () => setShowThemePicker(true), keywords: ["dark", "light", "colors"] },
@@ -418,17 +437,26 @@ export default function Home() {
             </div>
             {showThemePicker && (
               <div className="animate-slide-down">
-                <ThemeSwitcher currentTheme={currentTheme} onThemeChange={setCurrentTheme} />
+                <ThemeSwitcher currentTheme={currentTheme} onThemeChange={setCurrentTheme} autoTheme={autoTheme} onAutoThemeChange={setAutoTheme} />
               </div>
             )}
-            {/* View mode toggle */}
-            <button
-              onClick={toggleViewMode}
-              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
-            >
-              <span className="text-xs">{viewMode === "cozy" ? "☰" : "≡"}</span>
-              {viewMode === "cozy" ? "Compact view" : "Cozy view"}
-            </button>
+            <div className="flex gap-1">
+              {/* View mode toggle */}
+              <button
+                onClick={toggleViewMode}
+                className="flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+              >
+                <span className="text-xs">{viewMode === "cozy" ? "☰" : "≡"}</span>
+                {viewMode === "cozy" ? "Compact" : "Cozy"}
+              </button>
+              {/* Focus mode button */}
+              <button
+                onClick={() => setFocusMode(true)}
+                className="flex-1 flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+              >
+                <span className="text-xs">🎯</span> Focus
+              </button>
+            </div>
             {/* Streak Freeze */}
             <div className="flex items-center gap-2 px-2.5 py-1.5">
               <span className="text-xs">🧊</span>
@@ -468,8 +496,14 @@ export default function Home() {
                   journal={journal}
                   onNavigate={(t) => switchTab(t as Tab)}
                 />
-                {/* Weekly Challenges on Dashboard */}
-                <div className="mt-5">
+                {/* Monthly Recap + Weekly Challenges on Dashboard */}
+                <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <MonthlyRecap
+                    habits={habits}
+                    dailyLog={dailyLog}
+                    journal={journal}
+                    goals={goals}
+                  />
                   <WeeklyChallenges
                     habits={habits}
                     dailyLog={dailyLog}
@@ -481,6 +515,13 @@ export default function Home() {
                   />
                 </div>
               </>
+            )}
+            {tab === "shop" && (
+              <XPShop
+                profile={profile}
+                onProfileUpdate={setProfile}
+                onToast={showToast}
+              />
             )}
             {tab === "quests" && (
               <DailyQuests
@@ -640,6 +681,22 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===== FOCUS MODE ===== */}
+      {focusMode && (
+        <FocusMode
+          habits={habits}
+          dailyLog={dailyLog}
+          profile={profile}
+          onUpdate={(h, d, p) => {
+            setHabits(h);
+            setDailyLog(d);
+            setProfile(p);
+          }}
+          onXPGain={handleXPGain}
+          onClose={() => setFocusMode(false)}
+        />
       )}
 
       {/* ===== LEVEL UP MODAL ===== */}

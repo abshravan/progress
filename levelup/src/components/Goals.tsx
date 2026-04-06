@@ -187,11 +187,37 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
                         <span className="text-[var(--text-muted)]">Progress</span>
                         <span className="text-[var(--purple)] font-medium">{goal.progress}%</span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-[var(--border-light)] overflow-hidden mb-2">
+                      {/* Progress bar with milestones */}
+                      <div className="relative w-full h-2 rounded-full bg-[var(--border-light)] overflow-visible mb-2">
                         <div
-                          className="h-full rounded-full transition-all duration-500"
+                          className="h-full rounded-full transition-all duration-500 relative z-[1]"
                           style={{ width: `${goal.progress}%`, background: "var(--purple)" }}
                         />
+                        {/* Milestone markers */}
+                        {[25, 50, 75].map((ms) => (
+                          <div
+                            key={ms}
+                            className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 transition-all z-[2]"
+                            style={{
+                              left: `${ms}%`,
+                              marginLeft: "-5px",
+                              background: goal.progress >= ms ? "var(--purple)" : "var(--border-light)",
+                              borderColor: goal.progress >= ms ? "var(--purple)" : "var(--border)",
+                            }}
+                          />
+                        ))}
+                      </div>
+                      {/* Milestone labels */}
+                      <div className="flex justify-between px-1 mb-2">
+                        {[25, 50, 75, 100].map((ms) => (
+                          <span
+                            key={ms}
+                            className="text-[9px] font-medium transition-colors"
+                            style={{ color: goal.progress >= ms ? "var(--purple)" : "var(--text-muted)", opacity: goal.progress >= ms ? 1 : 0.5 }}
+                          >
+                            {ms === 25 ? "Start" : ms === 50 ? "Halfway" : ms === 75 ? "Almost" : "Done!"}
+                          </span>
+                        ))}
                       </div>
                       <input
                         type="range" min={0} max={100} step={5}
