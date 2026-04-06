@@ -109,6 +109,95 @@ export function getTodayString(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+// ===== XP MULTIPLIERS =====
+export function getXPMultiplier(): { multiplier: number; label: string } {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 9) return { multiplier: 1.5, label: "Early Bird 1.5x" };
+  if (hour >= 9 && hour < 12) return { multiplier: 1.25, label: "Morning Boost 1.25x" };
+  return { multiplier: 1, label: "" };
+}
+
+// ===== QUOTE OF THE DAY =====
+const QUOTES = [
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { text: "Small daily improvements over time lead to stunning results.", author: "Robin Sharma" },
+  { text: "We are what we repeatedly do. Excellence is not an act, but a habit.", author: "Aristotle" },
+  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+  { text: "Success is the sum of small efforts repeated day in and day out.", author: "Robert Collier" },
+  { text: "You don't have to be great to start, but you have to start to be great.", author: "Zig Ziglar" },
+  { text: "A year from now you will wish you had started today.", author: "Karen Lamb" },
+  { text: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+  { text: "Progress, not perfection.", author: "Unknown" },
+  { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
+  { text: "Motivation gets you started. Habit keeps you going.", author: "Jim Ryun" },
+  { text: "Don't count the days, make the days count.", author: "Muhammad Ali" },
+  { text: "Your future is created by what you do today, not tomorrow.", author: "Robert Kiyosaki" },
+  { text: "Consistency is what transforms average into excellence.", author: "Unknown" },
+  { text: "Fall seven times, stand up eight.", author: "Japanese Proverb" },
+  { text: "The harder you work for something, the greater you'll feel when you achieve it.", author: "Unknown" },
+  { text: "Dream big. Start small. Act now.", author: "Robin Sharma" },
+  { text: "Be stronger than your strongest excuse.", author: "Unknown" },
+  { text: "One percent better every day.", author: "James Clear" },
+  { text: "The pain of discipline is far less than the pain of regret.", author: "Sarah Bombell" },
+  { text: "What you get by achieving your goals is not as important as what you become.", author: "Zig Ziglar" },
+  { text: "Energy and persistence conquer all things.", author: "Benjamin Franklin" },
+  { text: "The only impossible journey is the one you never begin.", author: "Tony Robbins" },
+  { text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery" },
+  { text: "Action is the foundational key to all success.", author: "Pablo Picasso" },
+  { text: "You are never too old to set another goal or to dream a new dream.", author: "C.S. Lewis" },
+  { text: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  { text: "Start where you are. Use what you have. Do what you can.", author: "Arthur Ashe" },
+  { text: "The journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
+  { text: "Habits are the compound interest of self-improvement.", author: "James Clear" },
+];
+
+export function getQuoteOfDay(): { text: string; author: string } {
+  const today = getTodayString();
+  let hash = 0;
+  for (let i = 0; i < today.length; i++) hash = ((hash << 5) - hash + today.charCodeAt(i)) | 0;
+  return QUOTES[Math.abs(hash) % QUOTES.length];
+}
+
+// ===== DAILY TIPS =====
+const TIPS = [
+  "Try habit stacking — link a new habit to one you already do consistently.",
+  "Start with the two-minute rule: scale any habit down to just two minutes.",
+  "Track your wins, not just your failures. Progress is progress.",
+  "Your environment shapes your habits more than willpower does.",
+  "If you miss a day, never miss two in a row.",
+  "Focus on identity, not outcomes. 'I am a reader' beats 'I want to read more.'",
+  "The most effective habits are the ones you actually enjoy doing.",
+  "Review your habits weekly — what's working and what isn't?",
+  "Reward yourself immediately after completing a difficult habit.",
+  "Morning routines compound. How you start your day shapes everything after.",
+  "Break big goals into tiny daily actions. Systems beat goals.",
+  "Remove friction for good habits, add friction for bad ones.",
+  "Use implementation intentions: 'I will [habit] at [time] in [location].'",
+  "Energy management matters more than time management.",
+  "Rest is not the opposite of productivity — it's part of it.",
+];
+
+export function getDailyTip(): string {
+  const today = getTodayString();
+  let hash = 0;
+  for (let i = 0; i < today.length; i++) hash = ((hash << 7) - hash + today.charCodeAt(i)) | 0;
+  return TIPS[Math.abs(hash) % TIPS.length];
+}
+
+// ===== HABIT SCHEDULING =====
+export function isHabitActiveToday(habit: { frequency?: "daily" | "weekdays" | "weekends" | number[] }): boolean {
+  if (!habit.frequency || habit.frequency === "daily") return true;
+  const day = new Date().getDay(); // 0=Sun, 6=Sat
+  if (habit.frequency === "weekdays") return day >= 1 && day <= 5;
+  if (habit.frequency === "weekends") return day === 0 || day === 6;
+  if (Array.isArray(habit.frequency)) return habit.frequency.includes(day);
+  return true;
+}
+
+// ===== STREAK FREEZE COST =====
+export const STREAK_FREEZE_COST = 200;
+
 // ===== BADGES =====
 export interface BadgeDef {
   id: string;

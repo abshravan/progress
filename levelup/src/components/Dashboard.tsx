@@ -17,6 +17,8 @@ import {
   getLevelProgress,
   getTitle,
   MOODS,
+  getQuoteOfDay,
+  getDailyTip,
 } from "@/lib/game-data";
 
 interface Props {
@@ -49,6 +51,8 @@ export default function Dashboard({ profile, habits, dailyLog, goals, journal, o
   const categoryRates = getCategoryRates(habits, dailyLog);
   const activeGoals = goals.filter((g) => !g.completed).slice(0, 3);
   const recentJournal = journal.slice(0, 3);
+  const quote = getQuoteOfDay();
+  const tip = getDailyTip();
 
   return (
     <div>
@@ -60,6 +64,21 @@ export default function Dashboard({ profile, habits, dailyLog, goals, journal, o
         <p className="text-sm text-[var(--text-muted)] mt-1.5">
           Level {level} {title} &middot; {profile.xp.toLocaleString()} XP
         </p>
+      </div>
+
+      {/* Quote of the Day */}
+      <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-5 mb-5 card-hover animate-fade-in">
+        <div className="flex items-start gap-4">
+          <span className="text-2xl shrink-0 mt-0.5 opacity-60">✦</span>
+          <div>
+            <p className="text-[14px] text-[var(--text-primary)] journal-text italic leading-relaxed">
+              &ldquo;{quote.text}&rdquo;
+            </p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-2 font-medium">
+              — {quote.author}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Top row */}
@@ -303,6 +322,17 @@ export default function Dashboard({ profile, habits, dailyLog, goals, journal, o
                 <span className="text-[var(--text-muted)] text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
               </button>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Daily Tip */}
+      <div className="mt-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--card)] p-4 animate-fade-in">
+        <div className="flex items-center gap-3">
+          <span className="text-base shrink-0">💡</span>
+          <div>
+            <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-medium">Tip of the day</span>
+            <p className="text-[13px] text-[var(--text-secondary)] mt-0.5">{tip}</p>
           </div>
         </div>
       </div>

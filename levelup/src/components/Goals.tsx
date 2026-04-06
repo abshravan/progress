@@ -144,10 +144,15 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
                 <div className="flex-1 h-px bg-[var(--border-light)]" />
               </h3>
               <div className="space-y-3">
-                {activeGoals.map((goal) => (
+                {activeGoals.map((goal) => {
+                  const deadlineDays = goal.deadline ? Math.ceil((new Date(goal.deadline + "T23:59:59").getTime() - Date.now()) / 86400000) : null;
+                  const isOverdue = deadlineDays !== null && deadlineDays < 0;
+                  const isUrgent = deadlineDays !== null && deadlineDays <= 3 && deadlineDays >= 0;
+                  return (
                   <div
                     key={goal.id}
-                    className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-5 group card-hover"
+                    className="rounded-xl border bg-[var(--card)] p-5 group card-hover"
+                    style={{ borderColor: isOverdue ? "var(--pink)" : isUrgent ? "var(--accent)" : "var(--border-light)" }}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0 pr-4">
@@ -159,11 +164,16 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
                             {goal.description}
                           </p>
                         )}
-                        {goal.deadline && (
-                          <p className="text-[11px] text-[var(--text-muted)] mt-2">
-                            Due {goal.deadline}
-                          </p>
-                        )}
+                        {goal.deadline && (() => {
+                          const daysLeft = Math.ceil((new Date(goal.deadline + "T23:59:59").getTime() - Date.now()) / 86400000);
+                          const isUrgent = daysLeft <= 3 && daysLeft >= 0;
+                          const isOverdue = daysLeft < 0;
+                          return (
+                            <p className={`text-[11px] mt-2 font-medium ${isOverdue ? "text-[var(--pink)]" : isUrgent ? "text-[var(--accent)]" : "text-[var(--text-muted)]"}`}>
+                              {isOverdue ? `⚠ Overdue by ${Math.abs(daysLeft)}d` : isUrgent ? `⏰ ${daysLeft}d left — due ${goal.deadline}` : `Due ${goal.deadline}`}
+                            </p>
+                          );
+                        })()}
                       </div>
                       <button
                         onClick={() => deleteGoal(goal.id)}
@@ -191,7 +201,8 @@ export default function Goals({ goals, profile, onUpdate, onXPGain }: Props) {
                       />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

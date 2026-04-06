@@ -21,6 +21,8 @@ import {
   type JournalEntry,
   type DailyLog,
   type ThemeId,
+  type ViewMode,
+  type StreakFreezeData,
   loadProfile,
   loadHabits,
   loadGoals,
@@ -31,8 +33,13 @@ import {
   loadSoundEnabled,
   saveSoundEnabled,
   loadTheme,
+  loadViewMode,
+  saveViewMode,
+  loadStreakFreezes,
+  saveStreakFreezes,
+  saveProfile,
 } from "@/lib/storage";
-import { getLevelProgress, getTitle, getLevel } from "@/lib/game-data";
+import { getLevelProgress, getTitle, getLevel, STREAK_FREEZE_COST } from "@/lib/game-data";
 import { playLevelUp, playExport } from "@/lib/sounds";
 
 type Tab = "dashboard" | "quests" | "goals" | "journal" | "coach" | "analytics" | "badges" | "features";
@@ -71,6 +78,9 @@ export default function Home() {
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("tokyo-night");
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("cozy");
+  const [streakFreezes, setStreakFreezes] = useState<StreakFreezeData>({ available: 0, usedDates: [] });
+  const [confettiParticles, setConfettiParticles] = useState<{ id: number; x: number; y: number; color: string; delay: number }[]>([]);
 
   useEffect(() => {
     const p = loadProfile();
@@ -83,6 +93,8 @@ export default function Home() {
     const theme = loadTheme();
     setCurrentTheme(theme);
     applyTheme(theme);
+    setViewMode(loadViewMode());
+    setStreakFreezes(loadStreakFreezes());
     if (p) setPrevLevel(getLevel(p.xp));
     setLoaded(true);
   }, []);
@@ -106,6 +118,17 @@ export default function Home() {
       setLevelUpModal({ level: newLevel, title: getTitle(newLevel) });
       setPrevLevel(newLevel);
       playLevelUp();
+      // Spawn confetti particles
+      const colors = ["#e8a849", "#9d7cd8", "#73daca", "#f7768e", "#7aa2f7", "#ff9e64"];
+      const particles = Array.from({ length: 40 }, (_, i) => ({
+        id: Date.now() + i,
+        x: 50 + (Math.random() - 0.5) * 80,
+        y: 50 + (Math.random() - 0.5) * 60,
+        color: colors[i % colors.length],
+        delay: Math.random() * 0.5,
+      }));
+      setConfettiParticles(particles);
+      setTimeout(() => setConfettiParticles([]), 3000);
     }
   }, [profile?.xp, prevLevel, profile]);
 
@@ -157,6 +180,23 @@ export default function Home() {
     saveSoundEnabled(next);
   };
 
+  const toggleViewMode = () => {
+    const next: ViewMode = viewMode === "cozy" ? "compact" : "cozy";
+    setViewMode(next);
+    saveViewMode(next);
+  };
+
+  const buyStreakFreeze = () => {
+    if (!profile || profile.xp < STREAK_FREEZE_COST) return;
+    const newProfile = { ...profile, xp: profile.xp - STREAK_FREEZE_COST };
+    saveProfile(newProfile);
+    setProfile(newProfile);
+    const newFreezes = { ...streakFreezes, available: streakFreezes.available + 1 };
+    saveStreakFreezes(newFreezes);
+    setStreakFreezes(newFreezes);
+    showToast(`Streak Freeze purchased! (${newFreezes.available} available)`);
+  };
+
   const calculateStreak = useCallback((): number => {
     let streak = 0;
     const now = new Date();
@@ -165,14 +205,15 @@ export default function Home() {
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const log = dailyLog[dateStr];
-      if (log && Object.keys(log).length > 0) {
+      const froze = streakFreezes.usedDates.includes(dateStr);
+      if ((log && Object.keys(log).length > 0) || froze) {
         streak++;
       } else if (i > 0) {
         break;
       }
     }
     return streak;
-  }, [dailyLog]);
+  }, [dailyLog, streakFreezes]);
 
   // Command palette actions
   const cmdActions = profile ? [
@@ -380,6 +421,29 @@ export default function Home() {
                 <ThemeSwitcher currentTheme={currentTheme} onThemeChange={setCurrentTheme} />
               </div>
             )}
+            {/* View mode toggle */}
+            <button
+              onClick={toggleViewMode}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--card-hover)] transition-all"
+            >
+              <span className="text-xs">{viewMode === "cozy" ? "☰" : "≡"}</span>
+              {viewMode === "cozy" ? "Compact view" : "Cozy view"}
+            </button>
+            {/* Streak Freeze */}
+            <div className="flex items-center gap-2 px-2.5 py-1.5">
+              <span className="text-xs">🧊</span>
+              <span className="text-[11px] text-[var(--text-muted)] flex-1">
+                Freezes: {streakFreezes.available}
+              </span>
+              <button
+                onClick={buyStreakFreeze}
+                disabled={!profile || profile.xp < STREAK_FREEZE_COST}
+                className="text-[10px] px-2 py-1 rounded text-[var(--accent)] bg-[var(--accent-dim)] hover:bg-[var(--accent)] hover:text-[#191919] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                title={`Buy for ${STREAK_FREEZE_COST} XP`}
+              >
+                +Buy ({STREAK_FREEZE_COST} XP)
+              </button>
+            </div>
             <div className="text-[10px] text-[var(--text-muted)] px-1">
               LevelUp v2.0 &middot; {new Date().getFullYear()}
             </div>
@@ -423,6 +487,7 @@ export default function Home() {
                 habits={habits}
                 dailyLog={dailyLog}
                 profile={profile}
+                viewMode={viewMode}
                 onUpdate={(h, d, p) => {
                   setHabits(h);
                   setDailyLog(d);
@@ -583,7 +648,20 @@ export default function Home() {
           className="fixed inset-0 z-50 flex items-center justify-center animate-modal-backdrop"
           style={{ background: "rgba(0, 0, 0, 0.7)" }}
         >
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-12 text-center max-w-md w-full animate-scale-in shadow-2xl">
+          {/* Confetti particles */}
+          {confettiParticles.map((p) => (
+            <div
+              key={p.id}
+              className="confetti-particle"
+              style={{
+                left: `${p.x}%`,
+                top: `${p.y}%`,
+                backgroundColor: p.color,
+                animationDelay: `${p.delay}s`,
+              }}
+            />
+          ))}
+          <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-12 text-center max-w-md w-full animate-scale-in shadow-2xl relative z-10">
             <div className="w-20 h-20 rounded-full bg-[var(--accent-dim)] flex items-center justify-center mx-auto mb-6 animate-confetti">
               <span className="text-4xl">⚔️</span>
             </div>
