@@ -1,50 +1,108 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   type Habit,
   type DailyLog,
   type Profile,
+  type ViewMode,
   saveHabits,
   saveDailyLog,
   saveProfile,
   generateId,
   loadDailyBonusClaimed,
   saveDailyBonusClaimed,
+  loadHabitOrder,
+  saveHabitOrder,
 } from "@/lib/storage";
-import { CATEGORIES, type Category, getTodayString } from "@/lib/game-data";
+import { CATEGORIES, type Category, getTodayString, getXPMultiplier, isHabitActiveToday } from "@/lib/game-data";
 import { playQuestComplete, playQuestUndo, playBonusXP } from "@/lib/sounds";
+
+const FREQUENCY_OPTIONS: { value: Habit["frequency"]; label: string }[] = [
+  { value: "daily", label: "Daily" },
+  { value: "weekdays", label: "Weekdays" },
+  { value: "weekends", label: "Weekends" },
+];
+
+const CUSTOM_COLORS = ["#e8a849", "#9d7cd8", "#73daca", "#f7768e", "#7aa2f7", "#ff9e64", "#bb9af7", "#2ac3de"];
 
 interface Props {
   habits: Habit[];
   dailyLog: DailyLog;
   profile: Profile;
+  viewMode: ViewMode;
   onUpdate: (h: Habit[], d: DailyLog, p: Profile) => void;
   onXPGain: (amount: number) => void;
   onToast?: (message: string, undoAction?: () => void) => void;
 }
 
-export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPGain, onToast }: Props) {
+export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpdate, onXPGain, onToast }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<Category>("productivity");
   const [newXP, setNewXP] = useState(15);
+  const [newFrequency, setNewFrequency] = useState<Habit["frequency"]>("daily");
+  const [newColor, setNewColor] = useState<string | undefined>(undefined);
   const [justToggled, setJustToggled] = useState<string | null>(null);
   const [bonusClaimed, setBonusClaimed] = useState(false);
+  const dragItem = useRef<string | null>(null);
+  const dragOver = useRef<string | null>(null);
 
   const today = getTodayString();
   const todayLog = dailyLog[today] || {};
-  const completedCount = habits.filter((h) => todayLog[h.id]).length;
-  const allComplete = habits.length > 0 && completedCount === habits.length;
 
-  // Check daily bonus on all-complete
+  // Filter habits active today
+  const activeHabits = habits.filter(isHabitActiveToday);
+  const completedCount = activeHabits.filter((h) => todayLog[h.id]).length;
+  const allComplete = activeHabits.length > 0 && completedCount === activeHabits.length;
+  const { multiplier, label: multiplierLabel } = getXPMultiplier();
+
+  // Order habits
+  const orderHabits = (list: Habit[]): Habit[] => {
+    const order = loadHabitOrder();
+    if (order.length === 0) return list;
+    return [...list].sort((a, b) => {
+      const ai = order.indexOf(a.id);
+      const bi = order.indexOf(b.id);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  };
+
+  const orderedActiveHabits = orderHabits(activeHabits);
+
+  // Drag handlers
+  const handleDragStart = (id: string) => { dragItem.current = id; };
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    dragOver.current = id;
+  };
+  const handleDrop = () => {
+    if (!dragItem.current || !dragOver.current || dragItem.current === dragOver.current) return;
+    const ordered = orderedActiveHabits.map((h) => h.id);
+    const fromIdx = ordered.indexOf(dragItem.current);
+    const toIdx = ordered.indexOf(dragOver.current);
+    if (fromIdx === -1 || toIdx === -1) return;
+    ordered.splice(fromIdx, 1);
+    ordered.splice(toIdx, 0, dragItem.current);
+    // Merge with non-active habits
+    const fullOrder = [...ordered, ...habits.filter((h) => !isHabitActiveToday(h)).map((h) => h.id)];
+    saveHabitOrder(fullOrder);
+    dragItem.current = null;
+    dragOver.current = null;
+    // Force re-render
+    onUpdate(habits, dailyLog, profile);
+  };
+
   const checkDailyBonus = (newProfile: Profile, newLog: DailyLog) => {
     const newTodayLog = newLog[today] || {};
-    const allDone = habits.length > 0 && habits.every((h) => newTodayLog[h.id]);
+    const allDone = activeHabits.length > 0 && activeHabits.every((h) => newTodayLog[h.id]);
     if (allDone && !bonusClaimed) {
       const claimed = loadDailyBonusClaimed();
       if (!claimed[today]) {
-        const bonusXP = Math.round(habits.reduce((sum, h) => sum + h.xp, 0) * 0.5);
+        const bonusXP = Math.round(activeHabits.reduce((sum, h) => sum + h.xp, 0) * 0.5);
         claimed[today] = true;
         saveDailyBonusClaimed(claimed);
         setBonusClaimed(true);
@@ -66,36 +124,36 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
     const wasComplete = !!todayLog[habit.id];
     const newLog = { ...dailyLog };
     if (!newLog[today]) newLog[today] = {};
+    const effectiveXP = Math.round(habit.xp * multiplier);
+
     if (wasComplete) {
       delete newLog[today][habit.id];
-      const newProfile = { ...profile, xp: Math.max(0, profile.xp - habit.xp) };
+      const newProfile = { ...profile, xp: Math.max(0, profile.xp - effectiveXP) };
       saveDailyLog(newLog);
       saveProfile(newProfile);
       onUpdate(habits, newLog, newProfile);
       playQuestUndo();
       onToast?.(`Unchecked "${habit.name}"`, () => {
-        // Undo: re-complete
         const undoLog = { ...newLog };
         undoLog[today][habit.id] = true;
-        const undoProfile = { ...newProfile, xp: newProfile.xp + habit.xp };
+        const undoProfile = { ...newProfile, xp: newProfile.xp + effectiveXP };
         saveDailyLog(undoLog);
         saveProfile(undoProfile);
         onUpdate(habits, undoLog, undoProfile);
       });
     } else {
       newLog[today][habit.id] = true;
-      let newProfile = { ...profile, xp: profile.xp + habit.xp };
+      let newProfile = { ...profile, xp: profile.xp + effectiveXP };
       saveDailyLog(newLog);
       saveProfile(newProfile);
       playQuestComplete();
       newProfile = checkDailyBonus(newProfile, newLog);
       onUpdate(habits, newLog, newProfile);
-      onXPGain(habit.xp);
-      onToast?.(`Completed "${habit.name}" +${habit.xp} XP`, () => {
-        // Undo: uncomplete
+      onXPGain(effectiveXP);
+      onToast?.(`Completed "${habit.name}" +${effectiveXP} XP${multiplier > 1 ? ` (${multiplierLabel})` : ""}`, () => {
         const undoLog = { ...newLog };
         delete undoLog[today][habit.id];
-        const undoProfile = { ...newProfile, xp: Math.max(0, newProfile.xp - habit.xp) };
+        const undoProfile = { ...newProfile, xp: Math.max(0, newProfile.xp - effectiveXP) };
         saveDailyLog(undoLog);
         saveProfile(undoProfile);
         onUpdate(habits, undoLog, undoProfile);
@@ -105,12 +163,21 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
 
   const addHabit = () => {
     if (!newName.trim()) return;
-    const habit: Habit = { id: generateId(), name: newName.trim(), category: newCategory, xp: newXP };
+    const habit: Habit = {
+      id: generateId(),
+      name: newName.trim(),
+      category: newCategory,
+      xp: newXP,
+      frequency: newFrequency,
+      color: newColor,
+    };
     const newHabits = [...habits, habit];
     saveHabits(newHabits);
     onUpdate(newHabits, dailyLog, profile);
     setNewName("");
     setNewXP(15);
+    setNewFrequency("daily");
+    setNewColor(undefined);
     setShowForm(false);
   };
 
@@ -120,7 +187,12 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
     onUpdate(newHabits, dailyLog, profile);
   };
 
-  const grouped = habits.reduce(
+  const compact = viewMode === "compact";
+  const py = compact ? "py-2.5" : "py-3.5";
+  const px = compact ? "px-4" : "px-5";
+  const gap = compact ? "gap-3" : "gap-4";
+
+  const grouped = orderedActiveHabits.reduce(
     (acc, h) => {
       acc[h.category] = acc[h.category] || [];
       acc[h.category].push(h);
@@ -128,6 +200,8 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
     },
     {} as Record<Category, Habit[]>
   );
+
+  const inactiveCount = habits.length - activeHabits.length;
 
   return (
     <div>
@@ -143,30 +217,46 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
           + New quest
         </button>
       </div>
-      <p className="text-sm text-[var(--text-muted)] mb-8">
-        {completedCount} of {habits.length} completed today
-        {habits.length > 0 && (
+      <p className="text-sm text-[var(--text-muted)] mb-4">
+        {completedCount} of {activeHabits.length} completed today
+        {activeHabits.length > 0 && (
           <span className="ml-2 text-[var(--accent)]">
-            ({Math.round((completedCount / habits.length) * 100)}%)
+            ({Math.round((completedCount / activeHabits.length) * 100)}%)
+          </span>
+        )}
+        {inactiveCount > 0 && (
+          <span className="ml-2 text-[var(--text-muted)]">
+            &middot; {inactiveCount} off today
           </span>
         )}
       </p>
 
-      {/* Progress bar for today */}
-      {habits.length > 0 && (
-        <div className="w-full h-1 rounded-full bg-[var(--border-light)] overflow-hidden mb-8">
+      {/* XP Multiplier banner */}
+      {multiplier > 1 && (
+        <div className="rounded-lg border border-[var(--accent)] border-opacity-30 bg-[var(--accent-dim)] px-4 py-2.5 mb-4 flex items-center gap-3 animate-fade-in">
+          <span className="text-base">⚡</span>
+          <div>
+            <span className="text-xs font-semibold text-[var(--accent)]">{multiplierLabel}</span>
+            <span className="text-[11px] text-[var(--text-muted)] ml-2">Complete quests now for bonus XP!</span>
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {activeHabits.length > 0 && (
+        <div className="w-full h-1 rounded-full bg-[var(--border-light)] overflow-hidden mb-6">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
-              width: `${(completedCount / habits.length) * 100}%`,
-              background: completedCount === habits.length ? "var(--green)" : "var(--accent)",
+              width: `${(completedCount / activeHabits.length) * 100}%`,
+              background: allComplete ? "var(--green)" : "var(--accent)",
             }}
           />
         </div>
       )}
 
       {/* Daily Bonus Banner */}
-      {habits.length > 0 && (
+      {activeHabits.length > 0 && (
         <div
           className="rounded-xl border p-4 mb-6 flex items-center gap-4 transition-all duration-500"
           style={{
@@ -182,11 +272,11 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
             <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
               {allComplete
                 ? "You completed all quests today — 50% bonus XP awarded!"
-                : `Complete all ${habits.length} quests for +${Math.round(habits.reduce((s, h) => s + h.xp, 0) * 0.5)} bonus XP`}
+                : `Complete all ${activeHabits.length} quests for +${Math.round(activeHabits.reduce((s, h) => s + h.xp, 0) * 0.5)} bonus XP`}
             </div>
           </div>
           <div className="text-xs font-semibold shrink-0" style={{ color: allComplete ? "var(--green)" : "var(--text-muted)" }}>
-            {completedCount}/{habits.length}
+            {completedCount}/{activeHabits.length}
           </div>
         </div>
       )}
@@ -219,6 +309,58 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
               </button>
             ))}
           </div>
+
+          {/* Frequency */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs text-[var(--text-muted)] shrink-0">Schedule</span>
+            <div className="flex gap-1.5">
+              {FREQUENCY_OPTIONS.map((opt) => (
+                <button
+                  key={String(opt.value)}
+                  onClick={() => setNewFrequency(opt.value)}
+                  className="px-2.5 py-1.5 rounded text-[11px] font-medium transition-all"
+                  style={{
+                    background: newFrequency === opt.value ? "var(--accent-dim)" : "transparent",
+                    color: newFrequency === opt.value ? "var(--accent)" : "var(--text-muted)",
+                    border: `1px solid ${newFrequency === opt.value ? "var(--accent)" + "44" : "var(--border-light)"}`,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom color */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs text-[var(--text-muted)] shrink-0">Color</span>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setNewColor(undefined)}
+                className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[9px]"
+                style={{
+                  borderColor: !newColor ? "var(--accent)" : "var(--border-light)",
+                  background: "var(--card-hover)",
+                }}
+              >
+                {!newColor && "✓"}
+              </button>
+              {CUSTOM_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setNewColor(c)}
+                  className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[9px] text-white"
+                  style={{
+                    background: c,
+                    borderColor: newColor === c ? "white" : c,
+                  }}
+                >
+                  {newColor === c && "✓"}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center gap-4 mb-5">
             <span className="text-xs text-[var(--text-muted)] shrink-0">XP reward</span>
             <input type="range" min={5} max={50} step={5} value={newXP} onChange={(e) => setNewXP(Number(e.target.value))} className="flex-1 accent-amber" />
@@ -236,11 +378,13 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
       )}
 
       {/* Habits */}
-      {habits.length === 0 ? (
+      {activeHabits.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--border)] p-14 text-center animate-fade-in">
-          <p className="text-base text-[var(--text-muted)] mb-3">No quests yet</p>
+          <p className="text-base text-[var(--text-muted)] mb-3">
+            {habits.length === 0 ? "No quests yet" : "No quests scheduled for today"}
+          </p>
           <button onClick={() => setShowForm(true)} className="text-sm text-[var(--accent)] hover:underline btn-press">
-            Create your first quest
+            {habits.length === 0 ? "Create your first quest" : "Create a new quest"}
           </button>
         </div>
       ) : (
@@ -263,17 +407,23 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
                   {catHabits.map((habit) => {
                     const done = !!todayLog[habit.id];
                     const wasJustToggled = justToggled === habit.id;
+                    const habitColor = habit.color || cat.color;
+                    const freqLabel = habit.frequency === "weekdays" ? "wkdays" : habit.frequency === "weekends" ? "wkends" : null;
                     return (
                       <div
                         key={habit.id}
-                        className="flex items-center gap-4 px-5 py-3.5 group notion-row"
+                        draggable
+                        onDragStart={() => handleDragStart(habit.id)}
+                        onDragOver={(e) => handleDragOver(e, habit.id)}
+                        onDrop={handleDrop}
+                        className={`flex items-center ${gap} ${px} ${py} group notion-row cursor-grab active:cursor-grabbing`}
                       >
                         <button
                           onClick={() => toggleHabit(habit)}
                           className={`w-5 h-5 rounded flex items-center justify-center transition-all duration-200 shrink-0 ${wasJustToggled ? "animate-check-bounce" : ""}`}
                           style={{
-                            background: done ? cat.color : "transparent",
-                            border: `1.5px solid ${done ? cat.color : "var(--border)"}`,
+                            background: done ? habitColor : "transparent",
+                            border: `1.5px solid ${done ? habitColor : "var(--border)"}`,
                           }}
                         >
                           {done && (
@@ -283,7 +433,7 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
                           )}
                         </button>
                         <span
-                          className="flex-1 text-sm transition-all duration-200"
+                          className={`flex-1 ${compact ? "text-xs" : "text-sm"} transition-all duration-200`}
                           style={{
                             color: done ? "var(--text-muted)" : "var(--text-primary)",
                             textDecoration: done ? "line-through" : "none",
@@ -291,8 +441,16 @@ export default function DailyQuests({ habits, dailyLog, profile, onUpdate, onXPG
                         >
                           {habit.name}
                         </span>
+                        {freqLabel && (
+                          <span className="text-[9px] text-[var(--text-muted)] bg-[var(--border-light)] px-1.5 py-0.5 rounded shrink-0">
+                            {freqLabel}
+                          </span>
+                        )}
+                        {habit.color && (
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: habit.color }} />
+                        )}
                         <span className="text-[11px] font-medium text-[var(--accent)] shrink-0 opacity-50">
-                          +{habit.xp}
+                          +{Math.round(habit.xp * multiplier)}
                         </span>
                         <button
                           onClick={() => deleteHabit(habit.id)}

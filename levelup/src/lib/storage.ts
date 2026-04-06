@@ -9,6 +9,8 @@ export interface Habit {
   name: string;
   category: "productivity" | "learning" | "health" | "mindset";
   xp: number;
+  frequency?: "daily" | "weekdays" | "weekends" | number[]; // number[] = specific days (0=Sun..6=Sat)
+  color?: string; // custom color override
 }
 
 export interface Goal {
@@ -274,4 +276,38 @@ export function loadPomodoroSessions(): PomodoroSession[] {
 
 export function savePomodoroSessions(s: PomodoroSession[]): void {
   save("levelup-pomodoro", s);
+}
+
+// ===== STREAK FREEZE =====
+export interface StreakFreezeData {
+  available: number;
+  usedDates: string[];
+}
+
+export function loadStreakFreezes(): StreakFreezeData {
+  return load<StreakFreezeData>("levelup-streak-freezes", { available: 0, usedDates: [] });
+}
+
+export function saveStreakFreezes(data: StreakFreezeData): void {
+  save("levelup-streak-freezes", data);
+}
+
+// ===== VIEW MODE =====
+export type ViewMode = "cozy" | "compact";
+
+export function loadViewMode(): ViewMode {
+  return load<ViewMode>("levelup-view-mode", "cozy");
+}
+
+export function saveViewMode(mode: ViewMode): void {
+  save("levelup-view-mode", mode);
+}
+
+// ===== HABIT ORDER =====
+export function loadHabitOrder(): string[] {
+  return load<string[]>("levelup-habit-order", []);
+}
+
+export function saveHabitOrder(order: string[]): void {
+  save("levelup-habit-order", order);
 }

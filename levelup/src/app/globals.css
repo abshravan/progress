@@ -232,6 +232,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: brightness(0.95);
 }
 
+/* ===== CONFETTI ===== */
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: translateY(120vh) rotate(720deg) scale(0.3); }
+}
+
+.confetti-particle {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  z-index: 60;
+  pointer-events: none;
+  animation: confetti-fall 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 /* ===== JOURNAL ===== */
 .journal-text {
   font-family: 'Lora', Georgia, serif;
