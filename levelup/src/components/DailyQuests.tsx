@@ -15,7 +15,7 @@ import {
   loadHabitOrder,
   saveHabitOrder,
 } from "@/lib/storage";
-import { CATEGORIES, type Category, getTodayString, getXPMultiplier, isHabitActiveToday } from "@/lib/game-data";
+import { CATEGORIES, type Category, getTodayString, getXPMultiplier, isHabitActiveToday, getHabitStreak, PRIORITY_LABELS } from "@/lib/game-data";
 import { playQuestComplete, playQuestUndo, playBonusXP } from "@/lib/sounds";
 
 const FREQUENCY_OPTIONS: { value: Habit["frequency"]; label: string }[] = [
@@ -43,6 +43,8 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
   const [newXP, setNewXP] = useState(15);
   const [newFrequency, setNewFrequency] = useState<Habit["frequency"]>("daily");
   const [newColor, setNewColor] = useState<string | undefined>(undefined);
+  const [newPriority, setNewPriority] = useState<1 | 2 | 3 | undefined>(undefined);
+  const [showArchived, setShowArchived] = useState(false);
   const [justToggled, setJustToggled] = useState<string | null>(null);
   const [bonusClaimed, setBonusClaimed] = useState(false);
   const dragItem = useRef<string | null>(null);
@@ -51,8 +53,10 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
   const today = getTodayString();
   const todayLog = dailyLog[today] || {};
 
-  // Filter habits active today
-  const activeHabits = habits.filter(isHabitActiveToday);
+  // Filter habits active today (exclude archived)
+  const nonArchived = habits.filter((h) => !h.archived);
+  const archivedHabits = habits.filter((h) => h.archived);
+  const activeHabits = nonArchived.filter(isHabitActiveToday);
   const completedCount = activeHabits.filter((h) => todayLog[h.id]).length;
   const allComplete = activeHabits.length > 0 && completedCount === activeHabits.length;
   const { multiplier, label: multiplierLabel } = getXPMultiplier();
@@ -170,6 +174,7 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
       xp: newXP,
       frequency: newFrequency,
       color: newColor,
+      priority: newPriority,
     };
     const newHabits = [...habits, habit];
     saveHabits(newHabits);
@@ -178,6 +183,7 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
     setNewXP(15);
     setNewFrequency("daily");
     setNewColor(undefined);
+    setNewPriority(undefined);
     setShowForm(false);
   };
 
@@ -185,6 +191,20 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
     const newHabits = habits.filter((h) => h.id !== id);
     saveHabits(newHabits);
     onUpdate(newHabits, dailyLog, profile);
+  };
+
+  const archiveHabit = (id: string) => {
+    const newHabits = habits.map((h) => h.id === id ? { ...h, archived: true } : h);
+    saveHabits(newHabits);
+    onUpdate(newHabits, dailyLog, profile);
+    onToast?.("Quest archived");
+  };
+
+  const unarchiveHabit = (id: string) => {
+    const newHabits = habits.map((h) => h.id === id ? { ...h, archived: false } : h);
+    saveHabits(newHabits);
+    onUpdate(newHabits, dailyLog, profile);
+    onToast?.("Quest restored");
   };
 
   const compact = viewMode === "compact";
@@ -361,6 +381,38 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
             </div>
           </div>
 
+          {/* Priority */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs text-[var(--text-muted)] shrink-0">Priority</span>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => setNewPriority(undefined)}
+                className="px-2.5 py-1.5 rounded text-[11px] font-medium transition-all"
+                style={{
+                  background: !newPriority ? "var(--accent-dim)" : "transparent",
+                  color: !newPriority ? "var(--accent)" : "var(--text-muted)",
+                  border: `1px solid ${!newPriority ? "var(--accent)" + "44" : "var(--border-light)"}`,
+                }}
+              >
+                None
+              </button>
+              {([1, 2, 3] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setNewPriority(p)}
+                  className="px-2.5 py-1.5 rounded text-[11px] font-medium transition-all"
+                  style={{
+                    background: newPriority === p ? PRIORITY_LABELS[p].color + "18" : "transparent",
+                    color: newPriority === p ? PRIORITY_LABELS[p].color : "var(--text-muted)",
+                    border: `1px solid ${newPriority === p ? PRIORITY_LABELS[p].color + "44" : "var(--border-light)"}`,
+                  }}
+                >
+                  {PRIORITY_LABELS[p].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center gap-4 mb-5">
             <span className="text-xs text-[var(--text-muted)] shrink-0">XP reward</span>
             <input type="range" min={5} max={50} step={5} value={newXP} onChange={(e) => setNewXP(Number(e.target.value))} className="flex-1 accent-amber" />
@@ -409,6 +461,8 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
                     const wasJustToggled = justToggled === habit.id;
                     const habitColor = habit.color || cat.color;
                     const freqLabel = habit.frequency === "weekdays" ? "wkdays" : habit.frequency === "weekends" ? "wkends" : null;
+                    const habitStreak = getHabitStreak(habit.id, dailyLog);
+                    const pri = habit.priority ? PRIORITY_LABELS[habit.priority] : null;
                     return (
                       <div
                         key={habit.id}
@@ -441,9 +495,19 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
                         >
                           {habit.name}
                         </span>
+                        {pri && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ color: pri.color, background: pri.color + "18" }}>
+                            {pri.label}
+                          </span>
+                        )}
                         {freqLabel && (
                           <span className="text-[9px] text-[var(--text-muted)] bg-[var(--border-light)] px-1.5 py-0.5 rounded shrink-0">
                             {freqLabel}
+                          </span>
+                        )}
+                        {habitStreak > 1 && (
+                          <span className="text-[9px] text-[var(--accent)] font-semibold shrink-0">
+                            🔥{habitStreak}
                           </span>
                         )}
                         {habit.color && (
@@ -453,8 +517,15 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
                           +{Math.round(habit.xp * multiplier)}
                         </span>
                         <button
+                          onClick={() => archiveHabit(habit.id)}
+                          className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--blue)] transition-all text-xs shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--blue-dim)]"
+                          title="Archive"
+                        >
+                          ⌂
+                        </button>
+                        <button
                           onClick={() => deleteHabit(habit.id)}
-                          className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--pink)] transition-all text-sm ml-1 shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--pink-dim)]"
+                          className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--pink)] transition-all text-sm shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-[var(--pink-dim)]"
                         >
                           ×
                         </button>
@@ -465,6 +536,43 @@ export default function DailyQuests({ habits, dailyLog, profile, viewMode, onUpd
               </div>
             );
           })}
+        </div>
+      )}
+      {/* Archived habits */}
+      {archivedHabits.length > 0 && (
+        <div className="mt-8">
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors flex items-center gap-2"
+          >
+            <span style={{ transform: showArchived ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▸</span>
+            Archived ({archivedHabits.length})
+          </button>
+          {showArchived && (
+            <div className="mt-3 rounded-xl border border-[var(--border-light)] bg-[var(--card)] overflow-hidden divide-y divide-[var(--border-light)] animate-slide-down">
+              {archivedHabits.map((habit) => {
+                const cat = CATEGORIES[habit.category];
+                return (
+                  <div key={habit.id} className="flex items-center gap-3 px-5 py-3 group notion-row">
+                    <span className="text-sm opacity-40">{cat.icon}</span>
+                    <span className="flex-1 text-sm text-[var(--text-muted)] line-through">{habit.name}</span>
+                    <button
+                      onClick={() => unarchiveHabit(habit.id)}
+                      className="opacity-0 group-hover:opacity-100 text-[10px] text-[var(--green)] hover:underline transition-all"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      onClick={() => deleteHabit(habit.id)}
+                      className="opacity-0 group-hover:opacity-100 text-[var(--text-muted)] hover:text-[var(--pink)] transition-all text-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -19,6 +19,7 @@ import {
   MOODS,
   getQuoteOfDay,
   getDailyTip,
+  getMoodForecast,
 } from "@/lib/game-data";
 
 interface Props {
@@ -53,6 +54,7 @@ export default function Dashboard({ profile, habits, dailyLog, goals, journal, o
   const recentJournal = journal.slice(0, 3);
   const quote = getQuoteOfDay();
   const tip = getDailyTip();
+  const moodForecast = getMoodForecast(journal);
 
   return (
     <div>
@@ -323,6 +325,38 @@ export default function Dashboard({ profile, habits, dailyLog, goals, journal, o
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Mood Forecast */}
+        <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 card-hover">
+          <h3 className="text-[11px] uppercase tracking-widest text-[var(--text-muted)] font-medium mb-5">Mood Forecast</h3>
+          <div className="flex items-center gap-4 mb-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0"
+              style={{
+                background: moodForecast.trend === "improving" ? "var(--green-dim)" : moodForecast.trend === "declining" ? "var(--pink-dim)" : "var(--accent-dim)",
+              }}
+            >
+              {moodForecast.trend === "improving" ? "📈" : moodForecast.trend === "declining" ? "📉" : "📊"}
+            </div>
+            <div>
+              <div className="text-sm font-medium text-[var(--text-primary)] capitalize mb-0.5">
+                {moodForecast.trend}
+              </div>
+              <div className="text-[11px] text-[var(--text-muted)]">
+                Recent avg: {MOODS[Math.round(moodForecast.avgRecent)]?.emoji} {moodForecast.avgRecent.toFixed(1)} / 4
+              </div>
+            </div>
+          </div>
+          <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+            {moodForecast.prediction}
+          </p>
+          {journal.length >= 3 && (
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[var(--border-light)]">
+              <span className="text-[10px] text-[var(--text-muted)]">Based on</span>
+              <span className="text-[10px] font-medium text-[var(--text-secondary)]">{Math.min(7, journal.length)} recent entries</span>
+            </div>
+          )}
         </div>
       </div>
 

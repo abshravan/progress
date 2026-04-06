@@ -9,8 +9,10 @@ export interface Habit {
   name: string;
   category: "productivity" | "learning" | "health" | "mindset";
   xp: number;
-  frequency?: "daily" | "weekdays" | "weekends" | number[]; // number[] = specific days (0=Sun..6=Sat)
-  color?: string; // custom color override
+  frequency?: "daily" | "weekdays" | "weekends" | number[];
+  color?: string;
+  priority?: 1 | 2 | 3;
+  archived?: boolean;
 }
 
 export interface Goal {
@@ -310,4 +312,41 @@ export function loadHabitOrder(): string[] {
 
 export function saveHabitOrder(order: string[]): void {
   save("levelup-habit-order", order);
+}
+
+// ===== XP SHOP =====
+export interface ShopPurchase {
+  id: string;
+  purchasedAt: string;
+}
+
+export function loadShopPurchases(): ShopPurchase[] {
+  return load<ShopPurchase[]>("levelup-shop-purchases", []);
+}
+
+export function saveShopPurchases(purchases: ShopPurchase[]): void {
+  save("levelup-shop-purchases", purchases);
+}
+
+// ===== AUTO THEME =====
+export function loadAutoTheme(): boolean {
+  return load<boolean>("levelup-auto-theme", false);
+}
+
+export function saveAutoTheme(enabled: boolean): void {
+  save("levelup-auto-theme", enabled);
+}
+
+// ===== ARCHIVED HABITS =====
+export function loadArchivedHabits(): Habit[] {
+  return loadHabits().filter((h) => h.archived);
+}
+
+// ===== JOURNAL TEMPLATE =====
+export function loadLastTemplate(): string {
+  return load<string>("levelup-last-template", "");
+}
+
+export function saveLastTemplate(id: string): void {
+  save("levelup-last-template", id);
 }

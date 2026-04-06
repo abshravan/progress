@@ -288,6 +288,243 @@ export function pickWeeklyChallenges(seed: string): ChallengeTemplate[] {
   return shuffled.slice(0, 3);
 }
 
+// ===== HABIT STREAKS =====
+export function getHabitStreak(habitId: string, dailyLog: Record<string, Record<string, boolean>>): number {
+  let streak = 0;
+  const now = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    const log = dailyLog[dateStr];
+    if (log && log[habitId]) {
+      streak++;
+    } else if (i > 0) {
+      break;
+    }
+  }
+  return streak;
+}
+
+// ===== JOURNAL TEMPLATES =====
+export interface JournalTemplate {
+  id: string;
+  name: string;
+  icon: string;
+  prompts: string[];
+}
+
+export const JOURNAL_TEMPLATES: JournalTemplate[] = [
+  {
+    id: "daily-review",
+    name: "Daily Review",
+    icon: "📋",
+    prompts: [
+      "What did I accomplish today?",
+      "What challenged me?",
+      "What am I grateful for?",
+      "What will I focus on tomorrow?",
+    ],
+  },
+  {
+    id: "gratitude",
+    name: "Gratitude",
+    icon: "🙏",
+    prompts: [
+      "Three things I'm grateful for today:",
+      "1. ",
+      "2. ",
+      "3. ",
+      "\nSomeone who made my day better:",
+    ],
+  },
+  {
+    id: "reflection",
+    name: "Weekly Reflection",
+    icon: "🪞",
+    prompts: [
+      "This week's biggest win:",
+      "Something I learned:",
+      "A habit that's working well:",
+      "Something I want to improve:",
+      "My intention for next week:",
+    ],
+  },
+  {
+    id: "mood-check",
+    name: "Mood Check-in",
+    icon: "💭",
+    prompts: [
+      "How am I feeling right now?",
+      "What's contributing to this mood?",
+      "What would make today better?",
+      "One kind thing I can do for myself:",
+    ],
+  },
+  {
+    id: "goal-progress",
+    name: "Goal Progress",
+    icon: "🎯",
+    prompts: [
+      "Goal I'm working toward:",
+      "Progress I made today:",
+      "Obstacles I'm facing:",
+      "Next small step I can take:",
+    ],
+  },
+];
+
+// ===== MOOD FORECASTING =====
+export function getMoodForecast(journal: { mood: number; date: string }[]): {
+  trend: "improving" | "declining" | "stable";
+  avgRecent: number;
+  avgPrevious: number;
+  prediction: string;
+} {
+  if (journal.length < 3) {
+    return { trend: "stable", avgRecent: 2, avgPrevious: 2, prediction: "Keep journaling to unlock mood insights!" };
+  }
+
+  const sorted = [...journal].sort((a, b) => b.date.localeCompare(a.date));
+  const recent = sorted.slice(0, Math.min(7, Math.floor(sorted.length / 2)));
+  const previous = sorted.slice(recent.length, recent.length * 2);
+
+  const avgRecent = recent.reduce((s, e) => s + e.mood, 0) / recent.length;
+  const avgPrevious = previous.length > 0 ? previous.reduce((s, e) => s + e.mood, 0) / previous.length : avgRecent;
+
+  const diff = avgRecent - avgPrevious;
+  let trend: "improving" | "declining" | "stable";
+  let prediction: string;
+
+  if (diff > 0.3) {
+    trend = "improving";
+    prediction = "Your mood is trending upward! Keep doing what you're doing.";
+  } else if (diff < -0.3) {
+    trend = "declining";
+    prediction = "Your mood has dipped recently. Consider taking extra care of yourself.";
+  } else {
+    trend = "stable";
+    prediction = "Your mood has been steady. Consistency is its own reward.";
+  }
+
+  // Add specific advice based on patterns
+  const recentMoods = recent.map((e) => e.mood);
+  if (recentMoods.every((m) => m >= 3)) {
+    prediction = "You've been feeling great consistently — you're in a great flow!";
+  } else if (recentMoods.every((m) => m <= 1)) {
+    prediction = "Rough patch detected. Small wins compound — try completing one easy quest today.";
+  }
+
+  return { trend, avgRecent: Math.round(avgRecent * 10) / 10, avgPrevious: Math.round(avgPrevious * 10) / 10, prediction };
+}
+
+// ===== XP SHOP =====
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  category: "title" | "cosmetic" | "perk";
+  icon: string;
+}
+
+export const SHOP_ITEMS: ShopItem[] = [
+  // Titles
+  { id: "title-warrior", name: "Warrior", description: "Custom title: Warrior", cost: 500, category: "title", icon: "⚔️" },
+  { id: "title-sage", name: "Sage", description: "Custom title: Sage", cost: 500, category: "title", icon: "🧙" },
+  { id: "title-phoenix", name: "Phoenix", description: "Custom title: Phoenix", cost: 1000, category: "title", icon: "🔥" },
+  { id: "title-shadow", name: "Shadow", description: "Custom title: Shadow", cost: 1000, category: "title", icon: "🌑" },
+  { id: "title-celestial", name: "Celestial", description: "Custom title: Celestial", cost: 2000, category: "title", icon: "✨" },
+  { id: "title-eternal", name: "Eternal", description: "Custom title: Eternal", cost: 5000, category: "title", icon: "♾️" },
+  // Cosmetics
+  { id: "cosmetic-gold-border", name: "Gold Border", description: "Golden glow on your profile avatar", cost: 300, category: "cosmetic", icon: "👑" },
+  { id: "cosmetic-rainbow-xp", name: "Rainbow XP Bar", description: "Animated rainbow XP progress bar", cost: 800, category: "cosmetic", icon: "🌈" },
+  { id: "cosmetic-sparkle", name: "Sparkle Effect", description: "Sparkle animation on quest completion", cost: 600, category: "cosmetic", icon: "✦" },
+  // Perks
+  { id: "perk-double-bonus", name: "Double Daily Bonus", description: "Daily bonus XP is doubled for a week", cost: 1500, category: "perk", icon: "⚡" },
+  { id: "perk-freeze-3pack", name: "Freeze 3-Pack", description: "Get 3 streak freezes at a discount", cost: 450, category: "perk", icon: "🧊" },
+  { id: "perk-xp-boost", name: "XP Boost", description: "+10% XP for all quests permanently", cost: 3000, category: "perk", icon: "🚀" },
+];
+
+// ===== PRIORITY LABELS =====
+export const PRIORITY_LABELS: Record<number, { label: string; color: string; icon: string }> = {
+  1: { label: "P1", color: "#f7768e", icon: "🔴" },
+  2: { label: "P2", color: "#e8a849", icon: "🟡" },
+  3: { label: "P3", color: "#73daca", icon: "🟢" },
+};
+
+// ===== MONTHLY RECAP =====
+export function getMonthlyRecap(
+  dailyLog: Record<string, Record<string, boolean>>,
+  habits: { id: string; xp: number; category: Category }[],
+  journal: { date: string; mood: number }[],
+  goals: { completed: boolean; createdAt: string }[],
+  month?: string // YYYY-MM format, defaults to previous month
+): {
+  monthLabel: string;
+  totalXP: number;
+  questsCompleted: number;
+  activeDays: number;
+  totalDays: number;
+  journalEntries: number;
+  goalsCompleted: number;
+  avgMood: number;
+  bestCategory: string;
+  bestDay: string;
+  bestDayXP: number;
+} {
+  const now = new Date();
+  const targetMonth = month || `${now.getFullYear()}-${String(now.getMonth()).padStart(2, "0")}`;
+  const [year, mon] = targetMonth.split("-").map(Number);
+  const daysInMonth = new Date(year, mon + 1, 0).getDate();
+  const monthLabel = new Date(year, mon, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  let totalXP = 0;
+  let questsCompleted = 0;
+  let activeDays = 0;
+  let bestDayXP = 0;
+  let bestDay = "";
+  const catXP: Record<string, number> = {};
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(mon + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const log = dailyLog[dateStr];
+    if (!log) continue;
+    const completedIds = Object.keys(log).filter((k) => log[k]);
+    if (completedIds.length > 0) activeDays++;
+    let dayXP = 0;
+    for (const h of habits) {
+      if (log[h.id]) {
+        dayXP += h.xp;
+        catXP[h.category] = (catXP[h.category] || 0) + h.xp;
+      }
+    }
+    questsCompleted += completedIds.length;
+    totalXP += dayXP;
+    if (dayXP > bestDayXP) { bestDayXP = dayXP; bestDay = dateStr; }
+  }
+
+  const monthJournals = journal.filter((j) => j.date.startsWith(`${year}-${String(mon + 1).padStart(2, "0")}`));
+  const avgMood = monthJournals.length > 0 ? monthJournals.reduce((s, j) => s + j.mood, 0) / monthJournals.length : -1;
+  const monthGoals = goals.filter((g) => g.completed && g.createdAt.startsWith(`${year}-${String(mon + 1).padStart(2, "0")}`));
+
+  const bestCategory = Object.entries(catXP).sort((a, b) => b[1] - a[1])[0]?.[0] || "none";
+
+  return {
+    monthLabel,
+    totalXP,
+    questsCompleted,
+    activeDays,
+    totalDays: daysInMonth,
+    journalEntries: monthJournals.length,
+    goalsCompleted: monthGoals.length,
+    avgMood: Math.round(avgMood * 10) / 10,
+    bestCategory,
+    bestDay,
+    bestDayXP,
+  };
+}
+
 // ===== THEME DEFINITIONS =====
 export const THEMES = {
   "tokyo-night": {

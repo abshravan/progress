@@ -8,7 +8,7 @@ import {
   saveProfile,
   generateId,
 } from "@/lib/storage";
-import { MOODS } from "@/lib/game-data";
+import { MOODS, JOURNAL_TEMPLATES } from "@/lib/game-data";
 
 interface Props {
   journal: JournalEntry[];
@@ -181,6 +181,24 @@ export default function Journal({ journal, profile, onUpdate, onXPGain }: Props)
       {/* Compose area */}
       {isComposing && (
         <div className="rounded-xl border border-[var(--border-light)] bg-[var(--card)] p-6 mb-6 animate-slide-down">
+          {/* Templates */}
+          {!text.trim() && (
+            <div className="mb-5 pb-5 border-b border-[var(--border-light)]">
+              <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-medium">Templates</span>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {JOURNAL_TEMPLATES.map((tmpl) => (
+                  <button
+                    key={tmpl.id}
+                    onClick={() => setText(tmpl.prompts.join("\n"))}
+                    className="px-3 py-2 rounded-lg text-xs text-[var(--text-secondary)] bg-[var(--background)] border border-[var(--border-light)] hover:border-[var(--accent)] hover:text-[var(--text-primary)] transition-all btn-press"
+                  >
+                    {tmpl.icon} {tmpl.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Mood selector */}
           <div className="flex items-center gap-1 mb-4">
             <span className="text-[11px] text-[var(--text-muted)] mr-2">Mood</span>
